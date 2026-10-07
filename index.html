@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070A">
+<meta name="description" content="CIREEP - mini game hứng gói dữ liệu / catch the data packets">
+<title>CIREEP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="./img/cireep_icon.png">
+</head>
+<body>
+<div id="wrap" data-mode="menu">
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="stat">
+      <b id="score">0</b> 
+      <span data-i18n="score">Điểm</span>
+      <span id="rec" class="rec">● REC 00:00</span>
+    </div>
+    <div class="right">
+      <div id="eyes"></div>
+      <div class="stat"><span id="caughtLbl">0</span></div>
+      <div id="chaosTag"></div>
+    </div>
+  </div>
+
+  <button class="ghost iconbtn" id="pauseBtn" type="button" aria-label="Pause">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg>
+  </button>
+  <div id="count" class="count hidden" aria-live="assertive"></div>
+
+  <div class="screen" id="menu">
+    <div class="menu-grid">
+      <div class="col-main">
+        <p class="file" data-i18n="fileTag"></p>
+        <h1 class="title" data-text="CIREEP">CIREEP</h1>
+        <p class="sub" data-i18n-html="menuSub"></p>
+        <button id="startBtn" data-i18n="start"></button>
+        <p class="warn" data-i18n-html="warn"></p>
+        <div class="settings">
+          <button class="ghost" type="button" data-act="lang"></button>
+          <button class="ghost" type="button" data-act="mute" aria-pressed="false" data-i18n="mute"></button>
+          <button class="ghost" type="button" data-act="flash" aria-pressed="false" data-i18n="flash"></button>
+          <button class="ghost" type="button" data-act="scare" aria-pressed="false" data-i18n="noScare"></button>
+        </div>
+      </div>
+      <div class="col-side">
+        <div class="rules">
+          <div><i>[+]</i><span data-i18n="r1"></span></div>
+          <div><i>[!]</i><span data-i18n="r2"></span></div>
+          <div><i>[~]</i><span data-i18n="r3"></span></div>
+          <div><i>[↔]</i><span data-i18n="r4"></span></div>
+          <div><i>[*]</i><span data-i18n="r5"></span></div>
+          <div><i>[^]</i><span data-i18n="r6"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen hidden" id="warnScr" role="alertdialog" aria-modal="true" aria-labelledby="warnTitle" aria-describedby="warnBody">
+    <h2 class="title over" id="warnTitle" data-i18n="warnTitle" data-text=""></h2>
+    <p class="sub" id="warnBody" data-i18n-html="warnBody"></p>
+    <p class="sub small" data-i18n-html="warnHint"></p>
+    <div class="btnrow">
+      <button id="warnBack" class="alt" data-i18n="warnBack"></button>
+      <button id="warnOk" data-i18n="warnOk"></button>
+    </div>
+  </div>
+
+  <div class="screen hidden" id="pauseScr">
+    <h2 class="title mid" data-i18n="paused" data-text=""></h2>
+    <div class="btnrow">
+      <button id="resumeBtn" data-i18n="resume"></button>
+      <button id="quitBtn" class="alt" data-i18n="quit"></button>
+    </div>
+    <div class="settings">
+      <button class="ghost" type="button" data-act="lang"></button>
+      <button class="ghost" type="button" data-act="mute" aria-pressed="false" data-i18n="mute"></button>
+      <button class="ghost" type="button" data-act="flash" aria-pressed="false" data-i18n="flash"></button>
+      <button class="ghost" type="button" data-act="scare" aria-pressed="false" data-i18n="noScare"></button>
+    </div>
+  </div>
+
+  <div class="screen hidden" id="over">
+    <h2 class="title over" id="overTitle" data-i18n="overTitle" data-text=""></h2>
+    <div class="finalRow">
+      <div class="stat"><b id="fScore">0</b><span data-i18n="score"></span></div>
+      <div class="stat"><b id="fCaught">0</b><span data-i18n="packets"></span></div>
+      <div class="stat"><b id="fBest">0</b><span data-i18n="best"></span></div>
+    </div>
+    <p class="sub" id="overLine" data-i18n="over2"></p>
+    <div class="btnrow">
+      <button id="againBtn" data-i18n="again"></button>
+      <button id="overMenuBtn" class="alt" data-i18n="quit"></button>
+    </div>
+    <div class="settings">
+      <button class="ghost" type="button" data-act="lang"></button>
+      <button class="ghost" type="button" data-act="mute" aria-pressed="false" data-i18n="mute"></button>
+      <button class="ghost" type="button" data-act="flash" aria-pressed="false" data-i18n="flash"></button>
+      <button class="ghost" type="button" data-act="scare" aria-pressed="false" data-i18n="noScare"></button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
