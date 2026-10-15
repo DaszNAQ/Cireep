@@ -1,0 +1,41 @@
+/*
+  menu.css
+  Menu layout: one column on phones, two columns on wide screens.
+  Left column: title, start button and settings. Right column: rules.
+*/
+
+/* Default layout: one column */
+.menu-grid, .col-main, .col-side{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%
+}
+.menu-grid{
+  margin-inline: auto
+}
+
+/* Wide screens (or short landscape phones): two columns */
+@media (min-width: 760px), (orientation: landscape) and (min-width: 560px) and (max-height: 500px){
+  .menu-grid{
+    flex-direction: row;
+    justify-content: center;
+    gap: 48px;
+    max-width: 1000px
+  }
+  .col-main{
+    flex: 1 1 300px;
+    max-width: 460px
+  }
+  .col-side{
+    flex: 1 1 300px;
+    max-width: 480px
+  }
+  .col-main .title{
+    font-size: clamp(44px, min(7.5vw, 15vh), 104px)
+  }
+  .rules{
+    max-width: none
+  }
+}

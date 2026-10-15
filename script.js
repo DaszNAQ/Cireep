@@ -4,13 +4,25 @@
 // CANVAS
 var cv = document.getElementById('game');
 var ctx = cv.getContext('2d');
-var W = 0, H = 0, DPR = 1;
+var W = 0, H = 0, DPR = 1, QUAL = 1, SPR = {};
+
+function rescale(kx, ky){
+  var i, o;
+  for(i=0;i<S.objs.length;i++){ o = S.objs[i]; o.x *= kx; o.y *= ky; if(o.vy) o.vy *= ky; }
+  for(i=0;i<S.parts.length;i++){ o = S.parts[i]; o.x *= kx; o.y *= ky; o.vx *= kx; o.vy *= ky; }
+  for(i=0;i<S.floats.length;i++){ S.floats[i].x *= kx; S.floats[i].y *= ky; }
+  if(S.fake){ S.fake.x *= kx; S.fake.y *= ky; }
+  basket.x *= kx; basket.tx *= kx;
+}
 
 function resize(){
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  DPR = Math.max(0.75, Math.min(window.devicePixelRatio || 1, 2) * QUAL);
+  var oW = W, oH = H;
   W = cv.clientWidth; H = cv.clientHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   ctx.setTransform(DPR,0,0,DPR,0,0);
+  SPR = {};
+  if(oW && oH && (oW !== W || oH !== H)) rescale(W/oW, H/oH);
   basket.w = Math.max(84, Math.min(W*0.22, 168));
   basket.y = H - Math.max(70, H*0.13);
   basket.x = Math.max(basket.w/2, Math.min(W-basket.w/2, basket.x || W/2));
@@ -123,8 +135,9 @@ function audio(){
     AC = new (window.AudioContext||window.webkitAudioContext)();
     master = AC.createGain(); master.gain.value = muted ? 0 : 0.8;
     var comp = AC.createDynamicsCompressor();
-    comp.threshold.value = -10; comp.knee.value = 12; comp.ratio.value = 6; comp.attack.value = 0.004; comp.release.value = 0.2;
-    master.connect(comp); comp.connect(AC.destination);
+    comp.threshold.value = -6; comp.knee.value = 8; comp.ratio.value = 8; comp.attack.value = 0.004; comp.release.value = 0.2;
+    var lim = AC.createWaveShaper(); lim.curve = limitCurve();
+    master.connect(comp); comp.connect(lim); lim.connect(AC.destination);
     var n = AC.sampleRate * 2, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
     for(var i=0;i<n;i++) d[i] = Math.random()*2-1;
     noiseBuf = b;
@@ -143,28 +156,6 @@ function blip(f1,f2,dur,type,vol){
   g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime+dur);
   o.connect(g); g.connect(master); if(MU) g.connect(MU.send); o.start(); o.stop(a.currentTime+dur+0.02);
 }
-function scream(big, delay){
-  var a = audio(); if(!a || !noiseBuf) return;
-  var t0 = a.currentTime + (delay || 0), dur = big ? 1.5 : 0.85;
-  var src = a.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
-  var bp = a.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=2.5;
-  bp.frequency.setValueAtTime(2400,t0);
-  bp.frequency.exponentialRampToValueAtTime(180,t0+dur);
-  var g = a.createGain();
-  g.gain.setValueAtTime(0.0001,t0);
-  g.gain.exponentialRampToValueAtTime(0.3,t0+0.03);
-  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
-  src.connect(bp); bp.connect(g); g.connect(master); if(MU) g.connect(MU.send);
-  src.start(t0); src.stop(t0+dur+0.05);
-  var o = a.createOscillator(), og = a.createGain();
-  o.type='sawtooth';
-  o.frequency.setValueAtTime(900,t0);
-  o.frequency.exponentialRampToValueAtTime(42,t0+dur*0.9);
-  og.gain.setValueAtTime(0.0001,t0);
-  og.gain.exponentialRampToValueAtTime(0.2,t0+0.02);
-  og.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
-  o.connect(og); og.connect(master); if(MU) og.connect(MU.send); o.start(t0); o.stop(t0+dur+0.05);
-}
 function hum(){ blip(70,46,0.5,'triangle',0.1); }
 function stutter(){
   var a = audio(); if(!a || !noiseBuf) return;
@@ -179,16 +170,8 @@ function stutter(){
     src.connect(bp); bp.connect(g); g.connect(master); if(MU) g.connect(MU.send); src.start(t0); src.stop(t0+0.08);
   }
 }
-function scareSound(kind, fatal){
-  if(kind === 'calm'){ blip(fatal ? 120 : 170, 45, fatal ? 0.8 : 0.4, 'triangle', 0.1); return; }
-  if(kind === 'lunge'){ blip(80, 1600, 0.3, 'sawtooth', 0.1); scream(fatal, 0.26); return; }
-  if(kind === 'glitch'){ stutter(); scream(fatal, 0.3); return; }
-  if(kind === 'eyes'){ blip(50, 38, 0.9, 'sawtooth', 0.1); scream(fatal, 0.45); return; }
-  scream(fatal);
-}
-
 // MUSIC _ NHẠC NỀN & ÂM THANH KINH DỊ
-var MU = null, MUSIC_VOL = 0.55, DRONE_VOL = 0.10;
+var MU = null, MUSIC_VOL = 0.55, DRONE_VOL = 0.09;
 var SEMI = [0, 1, 3, 5, 7, 8, 10];
 function noteHz(deg, oct){ return 73.416 * Math.pow(2, (SEMI[((deg % 7) + 7) % 7] + 12*(oct + Math.floor(deg/7))) / 12); }
 
@@ -212,9 +195,170 @@ function pan(a, node, p){
   var sp = a.createStereoPanner(); sp.pan.value = p; node.connect(sp); return sp;
 }
 
+var DC = {};
+function limitCurve(){
+  var n = 4096, c = new Float32Array(n);
+  for(var i=0;i<n;i++){
+    var x = i*2/(n-1) - 1, ax = Math.abs(x), y = ax < 0.5 ? ax : 0.5 + 0.35*Math.tanh((ax - 0.5)/0.35);
+    c[i] = x < 0 ? -y : y;
+  }
+  return c;
+}
+function distCurve(k){
+  if(DC[k]) return DC[k];
+  var n = 2048, c = new Float32Array(n);
+  for(var i=0;i<n;i++){ var x = i*2/(n-1) - 1; c[i] = Math.tanh(k*x); }
+  return (DC[k] = c);
+}
+function dist(a, k){ var w = a.createWaveShaper(); w.curve = distCurve(k); w.oversample = '2x'; return w; }
+function outS(node){ node.connect(master); if(MU) node.connect(MU.send); }
+function panTo(a, node, p0, p1, t0, dur){
+  if(!a.createStereoPanner) return node;
+  var sp = a.createStereoPanner();
+  sp.pan.setValueAtTime(p0 || 0, t0);
+  if(p1 !== undefined) sp.pan.linearRampToValueAtTime(p1, t0 + dur);
+  node.connect(sp);
+  return sp;
+}
+function noiseSrc(a, t0, dur){
+  var n = a.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+  n.start(t0, Math.random()*1.5); n.stop(t0 + dur + 0.05);
+  return n;
+}
+
+function screech(t0, dur, vol, f0, glide, atk, soft){
+  var a = AC, at = atk || 0.02, tot = at + dur;
+  var g = envG(a, t0, at, vol, dur), mix = a.createGain(), hp = a.createBiquadFilter(), w = dist(a, soft ? 1.1 : 3);
+  mix.gain.value = soft ? 0.18 : 0.3;
+  hp.type = 'highpass'; hp.frequency.value = 350;
+  [1, 1.0595, 1.1225, 1.4142, 1.4983, 2].forEach(function(r, i){
+    var o = a.createOscillator(), v = a.createOscillator(), vg = a.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f0*r, t0);
+    o.frequency.exponentialRampToValueAtTime(f0*r*glide, t0 + tot);
+    o.detune.value = (Math.random()-0.5)*30;
+    v.frequency.value = 5.5 + Math.random()*2; vg.gain.value = 22 + i*3;
+    v.connect(vg); vg.connect(o.detune);
+    o.connect(mix); o.start(t0); v.start(t0); o.stop(t0 + tot + 0.05); v.stop(t0 + tot + 0.05);
+  });
+  mix.connect(hp); hp.connect(w);
+  if(soft){
+    var lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+    w.connect(lp); lp.connect(g); g.connect(MU.bus);
+  } else { w.connect(g); outS(g); }
+}
+
+function shriek(t0, dur, vol, f0, f1, p0, p1){
+  var a = AC, mix = a.createGain(), w = dist(a, 4), g = envG(a, t0, 0.015, vol, dur);
+  [1, 1.007].forEach(function(r){
+    var o = a.createOscillator(), v = a.createOscillator(), vg = a.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f0*r, t0);
+    o.frequency.exponentialRampToValueAtTime(f1*r, t0 + dur*0.35);
+    o.frequency.exponentialRampToValueAtTime(f0*0.75*r, t0 + dur);
+    v.frequency.value = 6.3; vg.gain.value = 45;
+    v.connect(vg); vg.connect(o.detune);
+    [[850,9,1],[1250,11,0.9],[2800,13,0.7],[3500,12,0.5]].forEach(function(fo){
+      var bp = a.createBiquadFilter(), fg = a.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = fo[0]; bp.Q.value = fo[1]; fg.gain.value = fo[2]*6;
+      o.connect(bp); bp.connect(fg); fg.connect(mix);
+    });
+    o.start(t0); v.start(t0); o.stop(t0 + dur + 0.05); v.stop(t0 + dur + 0.05);
+  });
+  var n = noiseSrc(a, t0, dur), nb = a.createBiquadFilter(), am = a.createGain(), ao = a.createOscillator(), ag = a.createGain();
+  nb.type = 'bandpass'; nb.frequency.value = 3000; nb.Q.value = 0.8; am.gain.value = 0.5;
+  ao.frequency.value = 68; ag.gain.value = 0.5; ao.connect(ag); ag.connect(am.gain); ao.start(t0); ao.stop(t0 + dur + 0.05);
+  n.connect(nb); nb.connect(am); am.connect(mix);
+  mix.connect(w); w.connect(g);
+  outS(panTo(a, g, p0 || 0, p1, t0, dur));
+}
+
+function braam(t0, vol, dur){
+  dur = dur || 1.3;
+  var a = AC, lp = a.createBiquadFilter(), w = dist(a, 2.2), g = envG(a, t0, 0.03, vol, dur), mix = a.createGain();
+  lp.type = 'lowpass'; lp.Q.value = 2.5;
+  lp.frequency.setValueAtTime(3000, t0); lp.frequency.exponentialRampToValueAtTime(180, t0 + dur);
+  mix.gain.value = 0.35;
+  [55, 55.4, 58.27, 77.78, 110.2].forEach(function(f, i){
+    var o = a.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = (i-2)*9;
+    o.connect(mix); o.start(t0); o.stop(t0 + dur + 0.05);
+  });
+  mix.connect(lp); lp.connect(w); w.connect(g); outS(g);
+}
+
+function sfxSwell(t0, dur, vol, f0, f1, p0, p1, fall){
+  var a = AC, n = noiseSrc(a, t0, dur), bp = a.createBiquadFilter(), g = a.createGain();
+  bp.type = 'bandpass'; bp.Q.value = 1.4;
+  bp.frequency.setValueAtTime(f0, t0); bp.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  if(fall){ g.gain.exponentialRampToValueAtTime(vol, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); }
+  else { g.gain.exponentialRampToValueAtTime(vol, t0 + dur*0.95); g.gain.setValueAtTime(0.0001, t0 + dur); }
+  n.connect(bp); bp.connect(g); outS(panTo(a, g, p0 || 0, p1, t0, dur));
+}
+
+function datamosh(t0, dur, vol){
+  var a = AC, o = a.createOscillator(), w = dist(a, 6), hp = a.createBiquadFilter(), g = envG(a, t0, 0.01, vol, dur), gate = a.createGain();
+  var step = 0.035, steps = Math.floor(dur/step), F = [233, 466, 1109, 1760, 2349, 3520, 880, 311], i;
+  o.type = 'square'; hp.type = 'highpass'; hp.frequency.value = 250;
+  gate.gain.setValueAtTime(1, t0);
+  for(i=0;i<steps;i++){
+    o.frequency.setValueAtTime(F[(Math.random()*F.length)|0] * (Math.random() < 0.2 ? 0.5 : 1), t0 + i*step);
+    gate.gain.setValueAtTime(Math.random() < 0.28 ? 0 : 1, t0 + i*step);
+  }
+  o.connect(hp); hp.connect(gate); gate.connect(w); w.connect(g); outS(g);
+  o.start(t0); o.stop(t0 + dur + 0.05);
+}
+
+function eyeClick(t, p){
+  var a = AC, n = noiseSrc(a, t, 0.03), bp = a.createBiquadFilter(), g = a.createGain(), o = a.createOscillator(), og = a.createGain();
+  bp.type = 'bandpass'; bp.frequency.value = 1700 + Math.random()*900; bp.Q.value = 5;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+  n.connect(bp); bp.connect(g); outS(panTo(a, g, p, undefined, t, 0));
+  o.type = 'sine'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.06);
+  og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.16, t + 0.004); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+  o.connect(og); outS(panTo(a, og, p, undefined, t, 0)); o.start(t); o.stop(t + 0.08);
+}
+
+function ring(t0, dur, vol){
+  var a = AC, g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  [4180, 4230].forEach(function(f){
+    var o = a.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.connect(g); o.start(t0); o.stop(t0 + dur + 0.05);
+  });
+  g.connect(master);
+}
+
+function scareSound(kind, fatal, j){
+  var a = audio(); if(!a || !noiseBuf) return;
+  var t0 = a.currentTime + 0.01, D = fatal ? 1.7 : 1.0, h, i;
+  if(kind === 'calm'){ blip(fatal ? 120 : 170, 45, fatal ? 0.8 : 0.4, 'triangle', 0.1); return; }
+  if(kind === 'lunge'){
+    sfxSwell(t0, 0.3, 0.35, 200, 3800, -0.5, 0.5);
+    h = t0 + 0.3;
+    braam(h, 0.5, D); shriek(h, D, 0.6, 420, 1500, 0.5, -0.5); screech(h, D*0.9, 0.35, 1000, 0.6);
+  } else if(kind === 'glitch'){
+    stutter(); datamosh(t0, 0.5, 0.35);
+    h = t0 + 0.32;
+    braam(h, 0.45, D); shriek(h, D, 0.55, 900, 2000, -0.6, 0.6); screech(h, D*0.9, 0.3, 1400, 0.7);
+  } else if(kind === 'eyes'){
+    var seed = j ? j.seed : 0, dur = j ? j.dur : D;
+    sfxSwell(t0, 0.5, 0.25, 90, 900);
+    blip(50, 38, 0.9, 'sawtooth', 0.12);
+    whisper(0, true); whisper(0.15, true);
+    for(i=0;i<16;i++) eyeClick(t0 + hash(seed + i*5.9 + 130)*0.45*dur + 0.04, hash(seed + i*7.3)*2 - 1);
+    h = t0 + 0.55*dur;
+    braam(h, 0.5, D*0.9); shriek(h, D*0.9, 0.6, 600, 1700, 0, 0); screech(h, D*0.8, 0.35, 1200, 0.55);
+  } else {
+    braam(t0, 0.55, D); shriek(t0, D, 0.6, 700, 1600, 0, 0); screech(t0, D*0.9, 0.38, 1100, 0.55);
+    sfxSwell(t0, 0.9, 0.2, 2400, 160, 0, 0, true);
+  }
+  ring(t0 + 0.5, fatal ? 4 : 3, fatal ? 0.04 : 0.028);
+  if(fatal){ braam(t0 + 0.95, 0.4, 1.2); whisper(1.1, true); whisper(1.7, true); }
+}
+
 function musicInit(){
   var a = AC; if(!a || MU) return;
-  var M = MU = { mode:'menu', acc:0, tBox:2, tPad:3, tAmb:9, nextBeat:0, deg:2, phrase:0, I:0 };
+  var M = MU = { mode:'menu', acc:0, tBox:2, tPad:3, tAmb:9, tChoir:6, nextBeat:0, deg:2, phrase:0, I:0, shift:0, vo:[] };
   M.bus = a.createGain(); M.bus.gain.value = 0.0001;
   M.lp = a.createBiquadFilter(); M.lp.type = 'lowpass'; M.lp.frequency.value = 1500; M.lp.Q.value = 0.6;
   M.mg = a.createGain(); M.mg.gain.value = MUSIC_VOL;
@@ -231,14 +375,31 @@ function musicInit(){
   [[36.71,'sawtooth',0.5,0],[73.42,'sawtooth',0.35,6],[77.78,'sawtooth',0.3,-4],[110,'triangle',0.22,3]].forEach(function(v){
     var o = a.createOscillator(), g = a.createGain();
     o.type = v[1]; o.frequency.value = v[0]; o.detune.value = v[3]; g.gain.value = v[2];
-    o.connect(g); g.connect(M.df); o.start();
+    o.connect(g); g.connect(M.df); o.start(); M.vo.push({ o:o, d0:v[3] });
   });
   var tv = a.createOscillator(); M.tri = a.createGain(); M.tri.gain.value = 0.0001;
-  tv.type = 'sawtooth'; tv.frequency.value = 103.83; tv.connect(M.tri); M.tri.connect(M.df); tv.start();
+  tv.type = 'sawtooth'; tv.frequency.value = 103.83; tv.connect(M.tri); M.tri.connect(M.df); tv.start(); M.vo.push({ o:tv, d0:0 });
   var l1 = a.createOscillator(), l1g = a.createGain();
   l1.frequency.value = 0.07; l1g.gain.value = 90; l1.connect(l1g); l1g.connect(M.df.frequency); l1.start();
   var l2 = a.createOscillator(), l2g = a.createGain();
   l2.frequency.value = 0.19; l2g.gain.value = 0.18; l2.connect(l2g); l2g.connect(tg.gain); l2.start();
+
+  var wl = Math.floor(8*a.sampleRate), cf = Math.floor(0.4*a.sampleRate), wb = a.createBuffer(1, wl, a.sampleRate), wd = wb.getChannelData(0), p1 = 0, p2 = 0, i, mx = 0;
+  for(i=0;i<wl;i++){ p1 += ((Math.random()*2-1) - p1)*0.08; p2 += (p1 - p2)*0.08; wd[i] = p2; }
+  for(i=0;i<cf;i++){ var k = i/cf; wd[wl-cf+i] = wd[wl-cf+i]*(1-k) + wd[i]*k; }
+  for(i=0;i<wl;i++) if(Math.abs(wd[i]) > mx) mx = Math.abs(wd[i]);
+  for(i=0;i<wl;i++) wd[i] /= mx;
+  var ws = a.createBufferSource(), wf = a.createBiquadFilter(), wl2 = a.createOscillator(), wlg = a.createGain();
+  ws.buffer = wb; ws.loop = true; ws.loopStart = cf/a.sampleRate; ws.loopEnd = wl/a.sampleRate;
+  wf.type = 'bandpass'; wf.frequency.value = 450; wf.Q.value = 0.9;
+  wl2.frequency.value = 0.045; wlg.gain.value = 260; wl2.connect(wlg); wlg.connect(wf.frequency);
+  M.wind = a.createGain(); M.wind.gain.value = 0.05;
+  ws.connect(wf); wf.connect(M.wind); M.wind.connect(M.bus); ws.start(); wl2.start();
+
+  var wo = a.createOscillator(), wv = a.createOscillator(), wvg = a.createGain();
+  M.whine = a.createGain(); M.whine.gain.value = 0.0001;
+  wo.type = 'sine'; wo.frequency.value = 2900; wv.frequency.value = 0.3; wvg.gain.value = 40;
+  wv.connect(wvg); wvg.connect(wo.detune); wo.connect(M.whine); M.whine.connect(M.bus); wo.start(); wv.start();
 }
 
 var MU_CFG = {
@@ -251,13 +412,19 @@ var MU_CFG = {
 };
 function musicMode(m){
   if(!MU) return;
-  var c = MU_CFG[m] || MU_CFG.menu, t = AC.currentTime;
+  var c = MU_CFG[m] || MU_CFG.menu, t = AC.currentTime, i;
   MU.mode = m;
   MU.bus.gain.cancelScheduledValues(t);
   MU.bus.gain.setTargetAtTime(c.bus, t, c.tc);
   MU.lp.frequency.setTargetAtTime(c.lp, t, c.tc);
   MU.drone.gain.setTargetAtTime(c.dr*DRONE_VOL, t, c.tc*1.5);
   if(m !== 'play') MU.nextBeat = 0;
+  for(i=0;i<MU.vo.length;i++){
+    var d = MU.vo[i].o.detune;
+    d.cancelScheduledValues(t);
+    if(m === 'over'){ d.setValueAtTime(d.value, t); d.linearRampToValueAtTime(-2100, t + 2.8); }
+    else d.setTargetAtTime(MU.vo[i].d0 + MU.shift, t, 1.5);
+  }
 }
 function silenceGap(dur, delay){
   if(!MU) return;
@@ -285,12 +452,15 @@ function padStep(){
 function boxNote(f, vol){
   var a = AC, t0 = a.currentTime + 0.02, det = (Math.random()-0.5)*40;
   var o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain(), g2 = a.createGain();
+  var lf = a.createOscillator(), lg = a.createGain();
   o.type = 'sine'; o.frequency.value = f; o.detune.value = det;
   o2.type = 'sine'; o2.frequency.value = f*2.76; o2.detune.value = det; g2.gain.value = 0.25;
+  lf.frequency.value = 3.5 + Math.random()*2; lg.gain.value = 14 + Math.random()*16;
+  lf.connect(lg); lg.connect(o.detune); lg.connect(o2.detune);
   g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0+0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0+1.6);
   if(Math.random() < 0.25){ o.frequency.setValueAtTime(f, t0+0.1); o.frequency.exponentialRampToValueAtTime(f*0.94, t0+1.2); }
   o.connect(g); o2.connect(g2); g2.connect(g); g.connect(MU.bus);
-  o.start(t0); o2.start(t0); o.stop(t0+1.7); o2.stop(t0+1.7);
+  o.start(t0); o2.start(t0); lf.start(t0); o.stop(t0+1.7); o2.stop(t0+1.7); lf.stop(t0+1.7);
 }
 function boxStep(){
   var M = MU, calm = S.mode !== 'play';
@@ -298,6 +468,7 @@ function boxStep(){
   if(M.phrase <= 0) M.phrase = 3 + ((Math.random()*4)|0);
   M.deg = Math.max(-2, Math.min(9, M.deg + [-2,-1,-1,1,1,2][(Math.random()*6)|0]));
   if(Math.random() > 0.12) boxNote(noteHz(M.deg, 3), calm ? 0.16 : 0.09);
+  if(Math.random() < 0.14) boxNote(noteHz(M.deg, 3)*1.0595, calm ? 0.11 : 0.06);
   M.phrase--;
   M.tBox = M.phrase > 0 ? 0.45 + Math.random()*0.4 : (calm ? 3 + Math.random()*4 : 9 + Math.random()*9);
 }
@@ -317,13 +488,13 @@ function creak(){
   pan(a, g, (Math.random()-0.5)*1.6).connect(MU.bus);
   o.start(t0); lf.start(t0); o.stop(t0+dur+0.05); lf.stop(t0+dur+0.05);
 }
-function whisper(delay){
+function whisper(delay, direct){
   var a = AC, t0 = a.currentTime + 0.05 + (delay || 0), n = 3 + ((Math.random()*3)|0), tt = t0;
   var src = a.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
   var f1 = a.createBiquadFilter(), f2 = a.createBiquadFilter(), g = a.createGain(), boost = a.createGain();
   f1.type = 'bandpass'; f1.frequency.value = 900 + Math.random()*300; f1.Q.value = 7;
   f2.type = 'bandpass'; f2.frequency.value = 2600 + Math.random()*700; f2.Q.value = 9;
-  boost.gain.value = 4;
+  boost.gain.value = direct ? 3.5 : 4;
   g.gain.setValueAtTime(0.0001, t0);
   for(var i=0;i<n;i++){
     var d = 0.12 + Math.random()*0.16;
@@ -333,7 +504,8 @@ function whisper(delay){
     tt += d + 0.05 + Math.random()*0.12;
   }
   src.connect(f1); src.connect(f2); f1.connect(boost); f2.connect(boost); boost.connect(g);
-  pan(a, g, (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random()*0.5)).connect(MU.bus);
+  var p = pan(a, g, (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random()*0.5));
+  if(direct) outS(p); else p.connect(MU.bus);
   src.start(t0); src.stop(tt + 0.1);
 }
 function ping(){
@@ -356,13 +528,55 @@ function swell(dur){
   src.start(t0); src.stop(t0+dur+0.05);
 }
 function ambient(){
-  var m = S.mode, r = Math.random();
-  if(m === 'play' && MU.I > 0.3 && r < 0.16){ swell(1.8); silenceGap(1.6, 1.8); }
-  else if(r < 0.3) creak();
-  else if(r < 0.62) whisper();
-  else if(r < 0.85) ping();
-  else swell(2.2);
-  MU.tAmb = (m === 'play' ? 14 - MU.I*7 : 14) + Math.random()*8;
+  var m = S.mode, I = MU.I, c = [['creak',1],['whisper',1.4],['ping',0.7],['swell',0.7]], tot = 0, r, i;
+  if(I > 0.2) c.push(['breath',1.2]);
+  if(I > 0.35) c.push(['strings',1.2]);
+  if(m === 'play' && I > 0.3) c.push(['silence',0.6]);
+  for(i=0;i<c.length;i++) tot += c[i][1];
+  r = Math.random()*tot;
+  for(i=0;i<c.length;i++){ r -= c[i][1]; if(r <= 0) break; }
+  var k = c[Math.min(i, c.length-1)][0];
+  if(k === 'creak') creak(); else if(k === 'whisper') whisper(); else if(k === 'ping') ping();
+  else if(k === 'swell') swell(2.2); else if(k === 'breath') breath(); else if(k === 'strings') stringSwell();
+  else { swell(1.8); silenceGap(1.6, 1.8); }
+  MU.tAmb = (m === 'play' ? 14 - I*7 : 14) + Math.random()*8;
+}
+
+var VOW = [[[450,8],[800,10],[2830,12]], [[800,8],[1150,10],[2800,12]], [[325,8],[700,10],[2530,12]]];
+function choirNote(f, vol, dur){
+  var a = AC, t0 = a.currentTime, atk = dur*0.45, g = envG(a, t0, atk, vol, dur - atk), mix = a.createGain(), vw = VOW[(Math.random()*VOW.length)|0];
+  [-14, 0, 13].forEach(function(c, i){
+    var o = a.createOscillator(), v = a.createOscillator(), vg = a.createGain();
+    o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = c;
+    v.frequency.value = 4.8 + i*0.5; vg.gain.value = 14;
+    v.connect(vg); vg.connect(o.detune);
+    vw.forEach(function(fo){
+      var bp = a.createBiquadFilter(), fg = a.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = fo[0]; bp.Q.value = fo[1]; fg.gain.value = 2.2;
+      o.connect(bp); bp.connect(fg); fg.connect(mix);
+    });
+    o.start(t0); v.start(t0); o.stop(t0 + dur + 0.1); v.stop(t0 + dur + 0.1);
+  });
+  mix.connect(g); g.connect(MU.bus);
+}
+function choirStep(){
+  var I = MU.I, d = [0,1,2,4][(Math.random()*4)|0], f = noteHz(d, 1), dur = 7 + Math.random()*4;
+  choirNote(f, 0.1, dur);
+  if(Math.random() < 0.55) choirNote(noteHz(d + 1, 1), 0.08, dur);
+  if(Math.random() < I*0.6) choirNote(f*1.4142, 0.07, dur);
+}
+function stringSwell(){
+  var dur = 4 + Math.random()*2.5;
+  screech(AC.currentTime, dur, 0.06, 700 + Math.random()*500, 0.82 + Math.random()*0.1, dur*0.5, true);
+}
+function breath(){
+  var a = AC, t0 = a.currentTime + 0.05, n = noiseSrc(a, t0, 2.6), bp = a.createBiquadFilter(), g = a.createGain();
+  bp.type = 'bandpass'; bp.Q.value = 0.9;
+  bp.frequency.setValueAtTime(600, t0); bp.frequency.linearRampToValueAtTime(1500, t0 + 0.9); bp.frequency.linearRampToValueAtTime(700, t0 + 2.3);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.7, t0 + 0.85); g.gain.exponentialRampToValueAtTime(0.04, t0 + 1.05);
+  g.gain.exponentialRampToValueAtTime(0.5, t0 + 1.35); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.5);
+  n.connect(bp); bp.connect(g); pan(a, g, (Math.random()-0.5)*1.6).connect(MU.bus);
 }
 
 function heartbeat(t, vol){
@@ -382,24 +596,35 @@ function heartbeat(t, vol){
 
 function musicUpdate(dt){
   if(!MU || !AC || AC.state !== 'running') return;
-  var M = MU, m = S.mode, now = AC.currentTime;
+  var M = MU, m = S.mode, now = AC.currentTime, i;
   var live = m === 'play' || m === 'scare' || m === 'pause' || m === 'resume';
-  var I = live ? Math.min(1, S.phase*0.2 + S.chaos*0.05) : (m === 'over' ? 0.35 : 0.1);
+  var I = live ? Math.min(1, S.phase*0.2 + S.chaos*0.05 + (3 - S.lives)*0.12) : (m === 'over' ? 0.35 : 0.1);
   M.I += (I - M.I) * Math.min(1, dt*0.8);
   M.acc += dt;
   if(M.acc >= 0.5){
     M.acc = 0;
     M.df.frequency.setTargetAtTime(170 + M.I*520, now, 0.6);
     M.tri.gain.setTargetAtTime(0.0001 + M.I*0.35, now, 0.8);
+    M.whine.gain.setTargetAtTime(M.I > 0.45 ? (M.I - 0.45)*0.05 : 0.0001, now, 1.5);
+    if(m !== 'over'){
+      M.shift = live ? -(S.phase*30 + (3 - S.lives)*25) : 0;
+      for(i=0;i<M.vo.length;i++) M.vo[i].o.detune.setTargetAtTime(M.vo[i].d0 + M.shift, now, 4);
+    }
   }
   if(muted) return;
   if(m === 'play'){
     var period = 60 / (50 + M.I*68);
     if(M.nextBeat < now - 0.5) M.nextBeat = now + 0.05;
-    while(M.nextBeat < now + 0.15){ heartbeat(M.nextBeat, 0.1 + 0.14*M.I); M.nextBeat += period; }
+    while(M.nextBeat < now + 0.15){
+      heartbeat(M.nextBeat, 0.1 + 0.14*M.I);
+      M.nextBeat += period;
+      if(Math.random() < M.I*0.1) M.nextBeat += period*0.45;
+      else if(Math.random() < M.I*0.08) M.nextBeat -= period*0.35;
+    }
   }
   if(m === 'scare' || m === 'resume') return;
   M.tPad -= dt; if(M.tPad <= 0){ padStep(); M.tPad = (m === 'play' ? 5 : 4) + Math.random()*4; }
+  M.tChoir -= dt; if(M.tChoir <= 0){ choirStep(); M.tChoir = (m === 'play' ? 11 : 9) + Math.random()*7; }
   M.tBox -= dt; if(M.tBox <= 0) boxStep();
   if(m !== 'pause'){ M.tAmb -= dt; if(M.tAmb <= 0) ambient(); }
 }
@@ -439,6 +664,9 @@ function riser(dur){
     og.gain.setValueAtTime(0.0001, t0); og.gain.exponentialRampToValueAtTime(0.035, t0+dur); og.gain.setValueAtTime(0.0001, t0+dur+0.02);
     o.connect(lp); lp.connect(og); og.connect(master); og.connect(MU.send); o.start(t0); o.stop(t0+dur+0.05);
   });
+  choirNote(noteHz(0, 1), 0.1, dur + 2.5);
+  choirNote(noteHz(1, 1), 0.08, dur + 2.5);
+  if(S.phase >= 2) braam(t0 + dur, 0.28, 1.3);
   impactAt(t0 + dur, 0.25);
 }
 function infect(){
@@ -452,13 +680,107 @@ function infect(){
     g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.07, t0+0.4); g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
     o.connect(lp); lp.connect(g); g.connect(master); g.connect(MU.send); o.start(t0); o.stop(t0+dur+0.05);
   });
-  whisper(0.9); whisper(1.9);
+  choirNote(noteHz(0, 1), 0.14, 6); choirNote(noteHz(1, 1), 0.12, 6); choirNote(noteHz(0, 2)*1.4142, 0.09, 6);
+  datamosh(t0, 0.35, 0.12);
+  whisper(0.9, true); whisper(1.9, true); whisper(2.8, true);
 }
 function chime(c){
   var k = Math.min(c, 13), f = 587.33 * Math.pow(2, (SEMI[k % 7] + 12*Math.floor(k/7)) / 12);
-  blip(f, f*0.99, 0.22, 'sine', 0.26);
-  blip(f*2.76, f*2.7, 0.12, 'sine', 0.07);
+  blip(f, f*0.985, 0.3, 'sine', 0.2);
+  blip(f*2.76, f*2.7, 0.16, 'sine', 0.07);
+  blip(f*0.5, f*0.48, 0.45, 'sine', 0.08);
+  if(c > 6 && Math.random() < 0.3) blip(f*1.0595, f*1.05, 0.25, 'sine', 0.05);
 }
+
+function stab(){
+  var a = audio(); if(!a) return;
+  var t0 = a.currentTime, g = envG(a, t0, 0.006, 0.16, 0.22), lp = a.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 1400;
+  [220, 311.13, 233.08].forEach(function(f){
+    var o = a.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = (Math.random()-0.5)*20;
+    o.connect(lp); o.start(t0); o.stop(t0 + 0.3);
+  });
+  lp.connect(g); outS(g);
+  thump(0.3);
+}
+function iceSound(){
+  var a = audio(); if(!a || !noiseBuf) return;
+  var t0 = a.currentTime;
+  [2200, 3320, 4950, 6200].forEach(function(f, i){
+    var o = a.createOscillator(), g = a.createGain(), ts = t0 + i*0.03;
+    o.type = 'sine'; o.frequency.value = f*(1 + (Math.random()-0.5)*0.01);
+    g.gain.setValueAtTime(0.0001, ts); g.gain.exponentialRampToValueAtTime(0.07, ts + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, ts + 0.6);
+    o.connect(g); outS(g); o.start(ts); o.stop(ts + 0.65);
+  });
+  var n = noiseSrc(a, t0, 0.3), hp = a.createBiquadFilter(), g2 = a.createGain();
+  hp.type = 'highpass'; hp.frequency.value = 3500;
+  g2.gain.setValueAtTime(0.0001, t0); g2.gain.exponentialRampToValueAtTime(0.25, t0 + 0.004); g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
+  n.connect(hp); hp.connect(g2); outS(g2);
+  sfxSwell(t0, 0.7, 0.12, 6000, 700, -0.3, 0.3, true);
+  blip(120, 40, 0.5, 'sine', 0.2);
+}
+function fireSound(){
+  var a = audio(); if(!a || !noiseBuf) return;
+  var t0 = a.currentTime;
+  sfxSwell(t0, 0.5, 0.5, 300, 2600);
+  var n = noiseSrc(a, t0, 0.9), lp = a.createBiquadFilter(), g = a.createGain();
+  lp.type = 'lowpass'; lp.frequency.value = 260;
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.6, t0 + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
+  n.connect(lp); lp.connect(g); outS(g);
+  for(var i=0;i<14;i++){
+    var tc = t0 + 0.05 + Math.random()*0.85, cn = noiseSrc(a, tc, 0.012), cb = a.createBiquadFilter(), cg = a.createGain();
+    cb.type = 'bandpass'; cb.frequency.value = 2500 + Math.random()*2000; cb.Q.value = 3;
+    cg.gain.setValueAtTime(0.0001, tc); cg.gain.exponentialRampToValueAtTime(0.2 + Math.random()*0.25, tc + 0.002); cg.gain.exponentialRampToValueAtTime(0.0001, tc + 0.012);
+    cn.connect(cb); cb.connect(cg); outS(panTo(a, cg, (Math.random()-0.5)*1.4, undefined, tc, 0));
+  }
+  blip(180, 50, 0.6, 'sawtooth', 0.1);
+}
+function warble(dur){
+  var a = audio(); if(!a) return;
+  var t0 = a.currentTime, g = envG(a, t0, dur*0.85, 0.16, dur*0.15), am = a.createGain(), lf = a.createOscillator(), lg = a.createGain();
+  am.gain.value = 0.6; lf.frequency.value = 7; lg.gain.value = 0.4; lf.connect(lg); lg.connect(am.gain);
+  [130.8, 138.6].forEach(function(f){
+    var o = a.createOscillator(); o.type = 'triangle';
+    o.frequency.setValueAtTime(f, t0); o.frequency.linearRampToValueAtTime(f*1.18, t0 + dur);
+    o.connect(am); o.start(t0); o.stop(t0 + dur + 0.05);
+  });
+  lf.start(t0); lf.stop(t0 + dur + 0.05); am.connect(g); outS(g);
+}
+function invStart(){
+  var a = audio(); if(!a || !noiseBuf) return;
+  blip(260, 40, 0.35, 'sawtooth', 0.18);
+  sfxSwell(a.currentTime, 0.2, 0.2, 400, 4000);
+  whisper(0.05, true);
+}
+function fakeSound(){
+  var a = audio(); if(!a || !noiseBuf) return;
+  var t0 = a.currentTime;
+  whisper(0, true);
+  [1900, 2010].forEach(function(f){
+    var o = a.createOscillator(), g = envG(a, t0, 0.02, 0.04, 0.25);
+    o.type = 'sine'; o.frequency.value = f; o.connect(g); outS(g); o.start(t0); o.stop(t0 + 0.3);
+  });
+}
+function countTick(n){
+  var a = audio(); if(!a || !noiseBuf) return;
+  var t0 = a.currentTime, s = noiseSrc(a, t0, 0.03), bp = a.createBiquadFilter(), g = a.createGain();
+  blip(n > 1 ? 110 : 150, n > 1 ? 50 : 58, 0.16, 'sine', 0.4);
+  bp.type = 'bandpass'; bp.frequency.value = 1300; bp.Q.value = 4;
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.03);
+  s.connect(bp); bp.connect(g); outS(g);
+}
+function pauseSound(){ blip(300, 60, 0.4, 'sine', 0.14); thump(0.3); }
+function uiClick(){ if(AC) blip(170, 80, 0.07, 'sine', 0.3); }
+function omen(){
+  var a = audio(); if(!a || !noiseBuf) return;
+  thump(0.5); sfxSwell(a.currentTime, 1.4, 0.16, 120, 700); whisper(0.2, true);
+}
+function startSound(){
+  var a = audio(); if(!a || !noiseBuf) return;
+  thump(0.5); braam(a.currentTime + 0.05, 0.14, 1.6);
+}
+
+document.addEventListener('click', function(e){ if(e.target.closest && e.target.closest('button')) uiClick(); }, true);
 
 function unlockAudio(){
   if(!audio()) return;
@@ -527,8 +849,7 @@ function revealTime(){ return Math.max(0.36, REV[S.phase] - S.chaos*0.01); }
 function revealTick(){
   if(S.revCd > 0) return;
   S.revCd = 0.12;
-  blip(240, 70, 0.14, 'square', 0.05);
-  thump(0.35);
+  stab();
 }
 
 function ttl(o){ return (basket.y - o.y) / Math.max(1, o.vy * S.slow); }
@@ -630,7 +951,7 @@ function loseLife(o){
   setMode('scare');
   S.fake = null;
   S.shake = kind === 'calm' ? 6 : 30;
-  scareSound(kind, fatal);
+  scareSound(kind, fatal, S.jump);
   impact(kind === 'calm' ? 0.25 : 0.55);
   paintEyes();
   if(!fatal) bumpChaos();
@@ -679,6 +1000,7 @@ function paintEyes(){
 
 function start(){
   audio();
+  startSound();
   setMode('play'); S.t=0; S.sec=-1; S.score=0; S.caught=0; S.lives=3; S.chaos=0;
   S.objs=[]; S.spawn=0; S.nextChaos=30; S.shake=0; S.flick=0;
   S.invuln=0; S.invert=0; S.invertPre=0; S.invertCd=0; S.slow=1; S.boostCd=0; S.flickCd=0; lastInv=false; basket.tx=basket.x; S.jump=null; S.combo=0; S.floats=[];
@@ -699,6 +1021,7 @@ var warnOpen = false;
 function requestStart(){
   if(noScare){ start(); return; }
   warnOpen = true;
+  omen();
   document.getElementById('menu').classList.add('hidden');
   warnScr.classList.remove('hidden');
   document.getElementById('warnBack').focus();
@@ -712,6 +1035,7 @@ function closeWarn(){
 function pauseGame(){
   if(S.mode !== 'play') return;
   releaseInput();
+  pauseSound();
   S.shake = 0; S.flick = 0;
   setMode('pause');
   pauseScr.classList.remove('hidden');
@@ -722,6 +1046,7 @@ function resumeGame(){
   pauseScr.classList.add('hidden');
   S.cd = 3;
   countEl.textContent = '3';
+  countTick(3);
   countEl.classList.remove('hidden');
   setMode('resume');
 }
@@ -786,23 +1111,36 @@ function updateHUD(){
 }
 
 // DRAW _ VẼ
+function sprite(key, sw, sh, ox, oy, draw){
+  var sp = SPR[key];
+  if(sp) return sp;
+  var c = document.createElement('canvas'), g;
+  c.width = Math.ceil(sw*DPR); c.height = Math.ceil(sh*DPR);
+  g = c.getContext('2d'); g.setTransform(c.width/sw, 0, 0, c.height/sh, 0, 0);
+  g.translate(ox, oy); draw(g);
+  return (SPR[key] = { c:c, sw:sw, sh:sh, ox:ox, oy:oy });
+}
+
+var MER = {};
 function drawBall(o){
-  var h = o.hue, r = o.r, spin = S.t*1.4 + o.ph;
-  ctx.save();
-  ctx.shadowColor = 'hsl('+h+' 100% 55% / .8)'; ctx.shadowBlur = 14;
-  var g = ctx.createRadialGradient(o.x - r*0.3, o.y - r*0.35, r*0.1, o.x, o.y, r);
-  g.addColorStop(0, 'hsl('+h+' 100% 50% / .95)');
-  g.addColorStop(1, 'hsl('+h+' 100% 18% / .98)');
-  ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, 6.2832); ctx.fillStyle = g; ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'hsl('+h+' 100% 62%)'; ctx.lineWidth = 1.3; ctx.stroke();
-  ctx.lineWidth = 1; ctx.strokeStyle = 'hsl('+h+' 100% 68% / .6)';
+  var h = o.hue, r = o.r, pad = r + 24, spin = S.t*1.4 + o.ph;
+  var sp = sprite('b' + h + ':' + r.toFixed(1), pad*2, pad*2, pad, pad, function(g){
+    g.shadowColor = 'hsl('+h+' 100% 55% / .8)'; g.shadowBlur = 14;
+    var gr = g.createRadialGradient(-r*0.3, -r*0.35, r*0.1, 0, 0, r);
+    gr.addColorStop(0, 'hsl('+h+' 100% 50% / .95)'); gr.addColorStop(1, 'hsl('+h+' 100% 18% / .98)');
+    g.beginPath(); g.arc(0, 0, r, 0, 6.2832); g.fillStyle = gr; g.fill();
+    g.shadowBlur = 0;
+    g.strokeStyle = 'hsl('+h+' 100% 62%)'; g.lineWidth = 1.3; g.stroke();
+  });
+  ctx.drawImage(sp.c, o.x - pad, o.y - pad, sp.sw, sp.sh);
+  ctx.strokeStyle = MER[h] || (MER[h] = 'hsl('+h+' 100% 68% / .6)'); ctx.lineWidth = 1;
+  ctx.beginPath();
   for(var i=0;i<3;i++){
-    var w = Math.abs(Math.cos(spin + i*1.047))*r;
-    ctx.beginPath(); ctx.ellipse(o.x, o.y, Math.max(0.5,w), r, 0, 0, 6.2832); ctx.stroke();
+    var w = Math.max(0.5, Math.abs(Math.cos(spin + i*1.047))*r);
+    ctx.moveTo(o.x + w, o.y); ctx.ellipse(o.x, o.y, w, r, 0, 0, 6.2832);
   }
-  ctx.beginPath(); ctx.ellipse(o.x, o.y, r, r*0.3, 0, 0, 6.2832); ctx.stroke();
-  ctx.restore();
+  ctx.moveTo(o.x + r, o.y); ctx.ellipse(o.x, o.y, r, r*0.3, 0, 0, 6.2832);
+  ctx.stroke();
 }
 
 // CIREEP FACE, USE FOR FALLING AND JUMPSCARE
@@ -830,8 +1168,11 @@ function drawFace(x, y, r, t, rage){
   for(var k=0;k<2;k++){
     var e = eyes[k];
     ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(e[0],e[1],e[2],e[3],k?-0.2:0.2,0,6.2832); ctx.fill();
-    ctx.shadowColor = '#FF1F3D'; ctx.shadowBlur = Math.min(r*0.4, 60); ctx.fillStyle = '#FF1F3D';
-    ctx.beginPath(); ctx.arc(e[0]+Math.sin(t*3+k)*e[2]*0.3, e[1], Math.max(1,e[2]*0.28), 0, 6.2832); ctx.fill();
+    var px = e[0]+Math.sin(t*3+k)*e[2]*0.3, pr = Math.max(1,e[2]*0.28);
+    if(r > 60){ ctx.shadowColor = '#FF1F3D'; ctx.shadowBlur = Math.min(r*0.4, 60); }
+    else { ctx.fillStyle = 'rgba(255,31,61,.28)'; ctx.beginPath(); ctx.arc(px, e[1], pr*2.6, 0, 6.2832); ctx.fill(); }
+    ctx.fillStyle = '#FF1F3D';
+    ctx.beginPath(); ctx.arc(px, e[1], pr, 0, 6.2832); ctx.fill();
     ctx.shadowBlur = 0;
     var dl = r*(0.35 + 0.3*rage + 0.25*Math.abs(Math.sin(t*1.3+k*2)));
     ctx.strokeStyle = 'rgba(200,10,40,.9)'; ctx.lineWidth = Math.max(1, r*0.07);
@@ -875,12 +1216,15 @@ function flameShape(s){
 
 // ICE BALL
 function drawIce(o){
-  var r = o.r*1.08;
+  var r = o.r*1.08, pad = r + 28;
+  var sp = sprite('i:' + r.toFixed(1), pad*2, pad*2, pad, pad, function(g){
+    g.shadowColor = 'rgba(120,220,255,.9)'; g.shadowBlur = 18;
+    var gr = g.createRadialGradient(-r*0.3,-r*0.35,r*0.1,0,0,r);
+    gr.addColorStop(0,'#BFF3FF'); gr.addColorStop(0.6,'#1B7FC4'); gr.addColorStop(1,'#07264A');
+    g.beginPath(); g.arc(0,0,r,0,6.2832); g.fillStyle = gr; g.fill();
+  });
+  ctx.drawImage(sp.c, o.x - pad, o.y - pad, sp.sw, sp.sh);
   ctx.save();
-  ctx.shadowColor = 'rgba(120,220,255,.9)'; ctx.shadowBlur = 18;
-  var g = ctx.createRadialGradient(o.x-r*0.3,o.y-r*0.35,r*0.1,o.x,o.y,r);
-  g.addColorStop(0,'#BFF3FF'); g.addColorStop(0.6,'#1B7FC4'); g.addColorStop(1,'#07264A');
-  ctx.beginPath(); ctx.arc(o.x,o.y,r,0,6.2832); ctx.fillStyle = g; ctx.fill(); ctx.shadowBlur = 0;
   ctx.strokeStyle = '#E6FBFF'; ctx.lineWidth = Math.max(1.2, r*0.1); ctx.lineCap = 'round';
   ctx.translate(o.x,o.y); ctx.rotate(S.t*0.6);
   for(var i=0;i<3;i++){
@@ -896,12 +1240,15 @@ function drawIce(o){
 
 // FIRE BALL
 function drawFireBall(o){
-  var r = o.r*1.08, f = 1 + Math.sin(S.t*12+o.ph)*0.06;
+  var r = o.r*1.08, f = 1 + Math.sin(S.t*12+o.ph)*0.06, pad = r + 30;
+  var sp = sprite('f:' + r.toFixed(1), pad*2, pad*2, pad, pad, function(g){
+    g.shadowColor = 'rgba(255,120,20,.95)'; g.shadowBlur = 20;
+    var gr = g.createRadialGradient(-r*0.3,-r*0.35,r*0.1,0,0,r);
+    gr.addColorStop(0,'#FFB347'); gr.addColorStop(0.6,'#D8330B'); gr.addColorStop(1,'#3A0903');
+    g.beginPath(); g.arc(0,0,r,0,6.2832); g.fillStyle = gr; g.fill();
+  });
+  ctx.drawImage(sp.c, o.x - pad, o.y - pad, sp.sw, sp.sh);
   ctx.save();
-  ctx.shadowColor = 'rgba(255,120,20,.95)'; ctx.shadowBlur = 20;
-  var g = ctx.createRadialGradient(o.x-r*0.3,o.y-r*0.35,r*0.1,o.x,o.y,r);
-  g.addColorStop(0,'#FFB347'); g.addColorStop(0.6,'#D8330B'); g.addColorStop(1,'#3A0903');
-  ctx.beginPath(); ctx.arc(o.x,o.y,r,0,6.2832); ctx.fillStyle = g; ctx.fill(); ctx.shadowBlur = 0;
   ctx.translate(o.x,o.y+r*0.04); ctx.scale(f,f);
   flameShape(r*0.62); ctx.fillStyle = '#FFE08A'; ctx.fill();
   ctx.translate(0,r*0.2); flameShape(r*0.34); ctx.fillStyle = '#FF5A1F'; ctx.fill();
@@ -985,7 +1332,7 @@ function freezeAll(src){
   for(var j=0;j<S.objs.length;j++){ var b = S.objs[j]; sparks(b.x,b.y,b.r,0); }
   sparks(src.x, basket.y, 20, 0);
   S.frost = 4;
-  blip(1400,500,0.35,'triangle',0.1); blip(2200,900,0.2,'sine',0.06);
+  iceSound();
 }
 function burnAll(src){
   var n = 0;
@@ -997,22 +1344,44 @@ function burnAll(src){
   }
   S.score += n; S.caught++; S.combo++; S.fireT = 0.5;
   sparks(src.x, basket.y, 20, 1);
-  blip(320,70,0.45,'sawtooth',0.14); blip(180,50,0.6,'triangle',0.12);
+  fireSound();
 }
 
 // DISTURBANCE INCREASES OVER TIME
 var fdt = 1/60;
 function per(p){ return Math.min(1, p*60*fdt); }
 
+var gbuf = null, gctx = null, vigA = -1;
+var fxFrost = null, fxFire = null, fxFlick = null, fxS = { frost:-1, fire:-1, flick:-1, col:'' }, lowFx = false, fxEma = 16;
+function setFx(el, key, a){
+  a = Math.round(a*50)/50;
+  if(fxS[key] !== a){ fxS[key] = a; el.style.opacity = a; }
+}
+function updateFx(){
+  if(!fxFrost){ fxFrost = document.getElementById('fxFrost'); fxFire = document.getElementById('fxFire'); fxFlick = document.getElementById('fxFlick'); }
+  var off = S.mode === 'scare' && S.jump && S.jump.kind !== 'calm', fa = 0;
+  setFx(fxFrost, 'frost', (!off && S.frost > 0) ? Math.min(1, S.frost/1.2) * (reduceFlash ? 0.12 : 0.28) : 0);
+  setFx(fxFire, 'fire', (!off && S.fireT > 0) ? S.fireT/0.5*(reduceFlash ? 0.06 : 0.22) : 0);
+  if(!off && S.flick > 0) fa = reduceFlash ? 0.18 : (S.flickCol === '#000000' ? 0.72 : 0.3);
+  if(fa > 0 && fxS.col !== S.flickCol){ fxS.col = S.flickCol; fxFlick.style.background = S.flickCol; }
+  setFx(fxFlick, 'flick', fa);
+}
+
 function glitchSlices(l){
+  var n = 1 + ((l*4)|0), sl = [], off = 0, i;
   ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-  var n = 1 + ((l*4)|0);
-  for(var i=0;i<n;i++){
+  for(i=0;i<n;i++){
     var h = ((8 + Math.random()*60*l)*DPR)|0, y = (Math.random()*(cv.height-h))|0, dx = ((Math.random()-0.5)*60*l*DPR)|0;
-    ctx.drawImage(cv, 0, y, cv.width, h, dx, y, cv.width, h);
+    sl.push([y, h, dx, off]); off += h;
+  }
+  if(!gbuf){ gbuf = document.createElement('canvas'); gctx = gbuf.getContext('2d'); }
+  if(gbuf.width !== cv.width){ gbuf.width = cv.width; gbuf.height = Math.ceil(5*68*DPR) + 4; }
+  for(i=0;i<n;i++) gctx.drawImage(cv, 0, sl[i][0], cv.width, sl[i][1], 0, sl[i][3], cv.width, sl[i][1]);
+  for(i=0;i<n;i++){
+    ctx.drawImage(gbuf, 0, sl[i][3], cv.width, sl[i][1], sl[i][2], sl[i][0], cv.width, sl[i][1]);
     if(Math.random() < 0.4){
       ctx.globalAlpha = 0.25; ctx.fillStyle = Math.random() < 0.5 ? '#FF1F3D' : '#8FE3F2';
-      ctx.fillRect(0, y, cv.width, Math.max(1, h*0.15)); ctx.globalAlpha = 1;
+      ctx.fillRect(0, sl[i][0], cv.width, Math.max(1, sl[i][1]*0.15)); ctx.globalAlpha = 1;
     }
   }
   ctx.restore();
@@ -1020,40 +1389,41 @@ function glitchSlices(l){
 function decay(){
   var l = S.nz; if(l <= 0) return;
   if(reduceFlash){ if(Math.random() < per(l*0.3)) noise(0.03, 2); return; }
+  if(lowFx){ if(Math.random() < per(l*0.15)) noise(0.03 + l*0.1, 3); return; }
   if(Math.random() < per(0.1 + l*0.5)) noise(0.03 + l*0.12, 2 + l*2);
   if(l > 0.12 && Math.random() < per(l*0.55)) glitchSlices(l);
 }
 
 function drawBasket(){
-  var x = basket.x, y = basket.y, w = basket.w, h = Math.max(26, w*0.26);
+  var x = basket.x, y = basket.y, w = basket.w, h = Math.max(26, w*0.26), pad = 32, sw = w + pad*2 + 12;
+  var sp = sprite('k:' + w.toFixed(1), sw, h*1.5 + pad*2, sw/2, pad, function(g){
+    g.shadowColor='rgba(143,227,242,.7)'; g.shadowBlur=22;
+    g.beginPath();
+    g.moveTo(-w/2, 0);
+    g.lineTo(-w/2*0.78, h);
+    g.quadraticCurveTo(0, h*1.45, w/2*0.78, h);
+    g.lineTo(w/2, 0);
+    g.closePath();
+    var gr = g.createLinearGradient(0,0,0,h);
+    gr.addColorStop(0,'#8FE3F2'); gr.addColorStop(1,'#0E3A44');
+    g.fillStyle=gr; g.fill();
+    g.shadowBlur=0;
+    g.beginPath(); g.moveTo(-w/2-4,0); g.lineTo(w/2+4,0);
+    g.strokeStyle='#EAFBFF'; g.lineWidth=4; g.lineCap='round'; g.stroke();
+    g.strokeStyle='rgba(5,7,10,.35)'; g.lineWidth=1.5;
+    for(var i=1;i<5;i++){
+      var px = -w/2 + i*(w/5);
+      g.beginPath(); g.moveTo(px,2); g.lineTo(px*0.8, h*1.1); g.stroke();
+    }
+  });
   ctx.save();
   ctx.translate(x,y);
   ctx.rotate(basket.lean);
-  ctx.shadowColor='rgba(143,227,242,.7)'; ctx.shadowBlur=22;
-  ctx.beginPath();
-  ctx.moveTo(-w/2, 0);
-  ctx.lineTo(-w/2*0.78, h);
-  ctx.quadraticCurveTo(0, h*1.45, w/2*0.78, h);
-  ctx.lineTo(w/2, 0);
-  ctx.closePath();
-  var g = ctx.createLinearGradient(0,0,0,h);
-  g.addColorStop(0,'#8FE3F2'); g.addColorStop(1,'#0E3A44');
-  ctx.fillStyle=g; ctx.fill();
-  ctx.shadowBlur=0;
-  ctx.beginPath(); ctx.moveTo(-w/2-4,0); ctx.lineTo(w/2+4,0);
-  ctx.strokeStyle='#EAFBFF'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke();
-  ctx.strokeStyle='rgba(5,7,10,.35)'; ctx.lineWidth=1.5;
-  for(var i=1;i<5;i++){
-    var px = -w/2 + i*(w/5);
-    ctx.beginPath(); ctx.moveTo(px,2); ctx.lineTo(px*0.8, h*1.1); ctx.stroke();
-  }
+  ctx.drawImage(sp.c, -sp.ox, -sp.oy, sp.sw, sp.sh);
   ctx.restore();
 }
 
 function drawBackdrop(){
-  var g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#070A10'); g.addColorStop(0.6,'#05070A'); g.addColorStop(1,'#0B1016');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
   ctx.strokeStyle='rgba(143,227,242,.06)'; ctx.lineWidth=1; ctx.beginPath();
   var off = reduceFlash ? 0 : (S.t*18)%40;
   for(var gy=off; gy<H; gy+=40){ ctx.moveTo(0,gy); ctx.lineTo(W,gy); }
@@ -1082,9 +1452,11 @@ function drawBackdrop(){
 
 function noise(alpha, cell){
   ctx.save(); ctx.globalAlpha = alpha;
-  for(var i=0;i<140;i++){
-    ctx.fillStyle = Math.random()>0.5 ? '#FFFFFF' : '#FF1F3D';
-    ctx.fillRect(Math.random()*W, Math.random()*H, cell*(0.5+Math.random()*2), cell*0.6);
+  for(var pass=0; pass<2; pass++){
+    ctx.fillStyle = pass ? '#FF1F3D' : '#FFFFFF';
+    ctx.beginPath();
+    for(var i=0;i<70;i++) ctx.rect(Math.random()*W, Math.random()*H, cell*(0.5+Math.random()*2), cell*0.6);
+    ctx.fill();
   }
   ctx.restore();
 }
@@ -1209,7 +1581,7 @@ function update(dt){
   if(S.invertCd > 0) S.invertCd -= dt;
   if(S.flickCd > 0) S.flickCd -= dt;
   if(S.boostCd > 0) S.boostCd -= dt;
-  if(S.invertPre > 0){ S.invertPre -= dt; if(S.invertPre <= 0) S.invert = 2.6; }
+  if(S.invertPre > 0){ S.invertPre -= dt; if(S.invertPre <= 0){ S.invert = 2.6; invStart(); } }
   var invNow = S.invert > 0;
   if(invNow !== lastInv){ lastInv = invNow; if(rawX !== null && (pointerDown || hover)) aim(rawX); }
 
@@ -1238,14 +1610,14 @@ function update(dt){
     S.flickCol = Math.random() < 0.6 ? '#000000' : '#FF1F3D';
   }
   if(S.phase >= 1 && S.invert <= 0 && S.invertPre <= 0 && S.invertCd <= 0 && Math.random() < dt*[0, 0.08, 0.1, 0.16][S.phase]){
-    S.invertPre = 0.8; S.invertCd = S.phase >= 3 ? 6 : 8; hum();
+    S.invertPre = 0.8; S.invertCd = S.phase >= 3 ? 6 : 8; warble(0.8);
   }
 
   if(!noScare && S.chaos >= 1 && !S.fake && S.fakeCd <= 0 && Math.random() < dt*(0.03 + S.chaos*0.015)){
     var fr = Math.min(W,H)*(0.12 + Math.random()*0.1);
     S.fake = { t:0, dur:0.3 + Math.random()*0.2, x: fr + Math.random()*(W - fr*2), y: H*0.15 + Math.random()*H*0.4, r: fr };
     S.fakeCd = 14;
-    blip(300, 60, 0.18, 'square', 0.04);
+    fakeSound();
   }
   if(S.fake){ S.fake.t += dt; if(S.fake.t >= S.fake.dur) S.fake = null; }
 
@@ -1399,35 +1771,13 @@ function render(){
 
   ctx.restore();
 
-  if(S.frost > 0){
-    var fa = Math.min(1, S.frost/1.2) * (reduceFlash ? 0.12 : 0.28);
-    var fg = ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.3,W/2,H/2,Math.max(W,H)*0.75);
-    fg.addColorStop(0,'rgba(140,220,255,0)'); fg.addColorStop(1,'rgba(140,220,255,'+fa+')');
-    ctx.fillStyle = fg; ctx.fillRect(0,0,W,H);
-  }
-  if(S.fireT > 0){
-    ctx.fillStyle = 'rgba(255,110,20,'+(S.fireT/0.5*(reduceFlash ? 0.06 : 0.22))+')'; ctx.fillRect(0,0,W,H);
-  }
-  // FLICK / NOISE
-  if(S.flick > 0){
-    if(reduceFlash){
-      ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = S.flickCol;
-      ctx.fillRect(0,0,W,H); ctx.restore();
-    } else {
-      ctx.save();
-      ctx.globalAlpha = S.flickCol === '#000000' ? 0.72 : 0.3;
-      ctx.fillStyle = S.flickCol; ctx.fillRect(0,0,W,H);
-      ctx.restore();
-      if(Math.random() < per(0.5)) noise(0.18, 3);
-    }
-  }
+  updateFx();
+  if(S.flick > 0 && !reduceFlash && !lowFx && Math.random() < per(0.5)) noise(0.18, 3);
   decay();
 
   // VIGNETTE
-  var v = ctx.createRadialGradient(W/2,H*0.5,Math.min(W,H)*0.35,W/2,H*0.5,Math.max(W,H)*0.78);
-  v.addColorStop(0,'rgba(0,0,0,0)');
-  v.addColorStop(1,'rgba(0,0,0,'+(0.5 + S.nz*0.35)+')');
-  ctx.fillStyle = v; ctx.fillRect(0,0,W,H);
+  var va = Math.round((0.5 + S.nz*0.35)*50)/50;
+  if(va !== vigA){ vigA = va; wrapEl.style.setProperty('--vig', va); }
   if(S.mode === 'scare'){
     var cp = S.jump.t / S.jump.dur;
     ctx.fillStyle = 'rgba(20,2,8,' + (0.62*(1 - cp*0.4)) + ')'; ctx.fillRect(0,0,W,H);
@@ -1437,9 +1787,27 @@ function render(){
 
 // LOOP
 var last = performance.now();
+var skipAcc = 0, pfT = 0, pfN = 0;
+function watchPerf(raw){
+  if(S.mode !== 'play' || S.t < 2 || raw > 250 || QUAL <= 0.5) return;
+  pfT += raw; pfN++;
+  if(pfT >= 3000){
+    var avg = pfT/pfN; pfT = 0; pfN = 0;
+    if(avg > 40){ QUAL = Math.max(0.5, QUAL - 0.25); resize(); }
+  }
+}
+
 function loop(now){
-  var dt = Math.min(0.05, (now - last)/1000); last = now;
+  var raw = now - last, dt = Math.min(0.05, raw/1000); last = now;
   fdt = Math.max(dt, 0.001);
+  fxEma += (Math.min(raw, 100) - fxEma)*0.1;
+  lowFx = S.mode === 'play' && fxEma > 24;
+  musicUpdate(dt);
+  if(S.mode === 'menu' || S.mode === 'over'){
+    skipAcc += dt;
+    if(skipAcc < 0.03){ requestAnimationFrame(loop); return; }
+    dt = skipAcc; skipAcc = 0; fdt = Math.max(dt, 0.001);
+  }
   if(S.mode === 'play') update(dt);
   else if(S.mode === 'scare'){
     S.t += dt; S.jump.t += dt;
@@ -1447,7 +1815,7 @@ function loop(now){
   } else if(S.mode === 'resume'){
     S.cd -= dt;
     var cn = Math.ceil(S.cd);
-    if(cn > 0){ if(countEl.textContent !== String(cn)) countEl.textContent = cn; }
+    if(cn > 0){ if(countEl.textContent !== String(cn)){ countEl.textContent = cn; countTick(cn); } }
     else { countEl.classList.add('hidden'); setMode('play'); }
   } else if(S.mode === 'pause'){
   } else {
@@ -1462,12 +1830,20 @@ function loop(now){
       if(o.y-o.r>H) S.objs.splice(i,1);
     }
   }
-  musicUpdate(dt);
+  watchPerf(raw);
   if(S.mode !== 'pause' || S.dirty){ render(); S.dirty = false; }
   requestAnimationFrame(loop);
 }
 
 resize();
 applyLang();
+
+if(document.fonts && document.fonts.load){
+  document.fonts.load('600 16px "IBM Plex Mono"');
+  document.fonts.load('700 16px "Chakra Petch"');
+}
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
 requestAnimationFrame(loop);
 })();

@@ -1,0 +1,80 @@
+/*
+  hud.css
+  The top bar while playing: score, REC timer, lives (eye icons) and chaos level.
+  The .stat style is also used on the game over screen.
+*/
+
+/* HUD bar at the top. Score on the left, lives on the right */
+#hud{
+  z-index: 2;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+}
+
+/* A big number with a small label under it */
+.stat{
+  line-height: 1
+}
+.stat b{
+  display: block;
+  font: 700 clamp(26px,7vw,40px)/1 var(--disp);
+  font-variant-numeric: tabular-nums;
+}
+.stat span{
+  display: block;
+  font-size: 12px;
+  color: var(--dim);
+  font-weight: 500;
+  margin-top: 4px
+}
+
+/* Red REC timer */
+.rec{
+  color: var(--cireep)!important;
+  font-variant-numeric: tabular-nums
+}
+
+/* Right side of the HUD */
+.right{
+  text-align: right
+}
+
+/* Lives are shown as eye icons (made in hud.js) */
+#eyes{
+  display: flex;
+  gap: 7px;
+  margin-bottom: 6px;
+  justify-content: flex-end
+}
+.eye{
+  width: 22px;
+  height: 22px;
+  transition: opacity .25s,filter .25s
+}
+
+/* A lost life: faded eye */
+.eye.gone{
+  opacity: .16;
+  filter: grayscale(1)
+}
+
+/* Chaos level text. It shows when the .on class is added */
+#chaosTag{
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cireep);
+  opacity: 0;
+  transition: opacity .3s;
+  margin-top: 4px
+}
+#chaosTag.on{
+  opacity: 1
+}

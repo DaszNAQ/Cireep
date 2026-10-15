@@ -1,0 +1,29 @@
+/*
+  responsive.css
+  Special cases: users who prefer less motion, and short screens.
+  Keep this file last so it can override the other files.
+*/
+
+/* User prefers less motion: stop animations */
+@media (prefers-reduced-motion:reduce){
+  button{
+    transition: none
+  }
+  .title::before,.title::after{
+    animation: none
+  }
+}
+
+/* Short screens: use smaller text so everything fits */
+@media (max-height: 700px){
+  .rules{
+    font-size: 12px;
+    gap: 4px
+  }
+  .sub{
+    font-size: 13px
+  }
+  .warn{
+    font-size: 11px
+  }
+}

@@ -1,0 +1,50 @@
+/*
+  effects.css
+  Full-screen visual layers on top of the canvas:
+  scanlines, frost, fire, flicker and dark edges (vignette).
+  Opacity and color of these layers are changed from JS (render/scene.js).
+*/
+
+/* Scanlines. They get stronger when the noise level --n grows */
+#wrap::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,calc(.16 + var(--n,0)*.22)) 2px 3px);
+}
+
+/* Base style for the color layers. Opacity is set from JS */
+.fx{
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0
+}
+
+/* Ice effect: blue edges */
+#fxFrost{
+  background: radial-gradient(circle at 50% 50%,rgba(140,220,255,0) 30vmin,rgb(140,220,255) 75vmax)
+}
+
+/* Fire effect: orange flash */
+#fxFire{
+  background: rgb(255,110,20)
+}
+
+/* Light flicker: black or red flash (color is set from JS) */
+#fxFlick{
+  background: #000
+}
+
+/* Dark edges. Strength --vig is set from JS */
+.vig{
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: var(--vig,.5);
+  background: radial-gradient(circle at 50% 50%,rgba(0,0,0,0) 35vmin,#000 78vmax)
+}

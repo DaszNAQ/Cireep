@@ -1,0 +1,15 @@
+{
+  "name": "cireep",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CIREEP - horror mini game: catch the data packets (HTML5).",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "serve:dist": "node tools/serve.mjs dist",
+    "build": "node tools/build.mjs",
+    "check": "node tools/check.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

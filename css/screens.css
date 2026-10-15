@@ -1,0 +1,191 @@
+/*
+  screens.css
+  Full-screen panels (menu, warning, pause, game over):
+  layout, titles, glitch effect, text, rules list and final score.
+*/
+
+/* A full-screen panel on top of the game */
+.screen{
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  padding: 20px 20px 28px;
+  gap: 12px;
+  background: radial-gradient(120% 80% at 50% 40%,rgba(10,16,24,.88),rgba(5,7,10,.97));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+/* Hidden panel */
+.screen.hidden{
+  display:none
+}
+
+/* Center the content when it is short. It scrolls when it is tall */
+.screen > :first-child{
+  margin-top:auto
+}
+.screen > :last-child{
+  margin-bottom:auto
+}
+
+/* Small file name above the title */
+.file{
+  margin: 0;
+  font-size: 12px;
+  color: var(--dim)
+}
+
+/* Big game title */
+.title{
+  position: relative;
+  margin: 0;
+  color: var(--bone);
+  font: 700 clamp(48px, min(19vw,16vh), 128px)/.9 var(--disp);
+  letter-spacing: .05em;
+}
+
+/* Smaller red title (warning and game over screens) */
+.title.over{
+  font-size: clamp(34px,10vw,68px);
+  color: var(--cireep);
+  letter-spacing: .02em;
+  line-height: 1;
+}
+
+/* Glitch effect: two colored copies of the title, shown for a short moment */
+.title::before,.title::after{
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+.title::before{
+  color: var(--cireep);
+  animation: glitch 6s infinite;
+}
+.title::after{
+  color: var(--ice);
+  animation: glitch 6s .1s infinite reverse
+}
+.title.over::before{
+  color:var(--ice)
+}
+.title.over::after{
+  color:var(--bone)
+}
+
+/* Glitch animation: copies are hidden most of the time, then jump quickly */
+@keyframes glitch{
+  0%,91%,100%{opacity:0;transform:none;clip-path:inset(0)
+}
+  92%{opacity:.9;transform:translate(-5px,0);clip-path:inset(18% 0 58% 0)
+}
+  94%{opacity:.9;transform:translate(6px,0);clip-path:inset(62% 0 8% 0)
+}
+  96%{opacity:.9;transform:translate(-3px,0);clip-path:inset(40% 0 36% 0)
+}
+}
+
+/* "Reduce flashing" mode: turn off the glitch animation */
+.calm .title::before,.calm .title::after{
+  animation:none
+}
+
+/* Description text */
+.sub{
+  max-width: 36ch;
+  margin: 0;
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 1.65
+}
+.sub em{
+  color: var(--bone);
+  font-style: normal;
+  font-weight: 600
+}
+
+/* Rules list on the menu */
+.rules{
+  display: grid;
+  gap: 6px;
+  max-width: 38ch;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left
+}
+.rules div{
+  display: flex;
+  gap: 10px;
+  align-items: baseline
+}
+.rules i{
+  font-style: normal;
+  color: var(--ice);
+  width: 4ch;
+  flex: none
+}
+
+/* Warning text on the menu */
+.warn{
+  font-size: 12px;
+  color: var(--bone);
+  max-width: 38ch;
+  line-height: 1.6;
+  margin: 0
+}
+
+/* Final score row on the game over screen */
+.finalRow{
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 4px;
+  border: 1px solid rgba(216,221,211,.16);
+  border-radius: 2px;
+  background: rgba(5,7,10,.45)
+}
+.finalRow .stat{
+  min-width: clamp(78px, 24vw, 112px);
+  padding: 14px 10px 12px
+}
+.finalRow .stat + .stat{
+  border-left: 1px solid rgba(216,221,211,.16)
+}
+.finalRow .stat b{
+  font-size: clamp(30px,9vw,46px)
+}
+.finalRow .stat b.record{
+  color: var(--ice);
+  text-shadow: 0 0 16px rgba(143,227,242,.55)
+}
+.finalRow .stat b.record::after{
+  content: " ★";
+  font-size: .42em;
+  vertical-align: top
+}
+
+/* Medium title (pause screen) */
+.title.mid{
+  font-size: clamp(36px, 11vw, 64px);
+  line-height: 1;
+  letter-spacing: .04em
+}
+
+/* Smaller description text */
+.sub.small{
+  font-size: 12px
+}
+
+/* Keep the words on one line */
+.nb{
+  white-space: nowrap
+}

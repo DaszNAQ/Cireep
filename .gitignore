@@ -1,0 +1,5 @@
+# .gitignore
+# Folders that Git should ignore: installed packages and build results
+node_modules/
+dist/
+release/

@@ -1,0 +1,59 @@
+/*
+  base.css
+  Basic page setup: theme colors, fonts, reset, page body, game box and canvas.
+  Load this file first. Other CSS files use the variables defined here.
+*/
+
+/* Theme colors, fonts and safe-area padding (for phones with a notch) */
+:root{
+  --void: #05070A;
+  --bone: #D8DDD3;
+  --ice: #8FE3F2;
+  --cireep: #FF1F3D;
+  --dim: #8893A1;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --disp: "Chakra Petch", system-ui, sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top,0px);
+  padding-bottom: env(safe-area-inset-bottom,0px);
+}
+
+/* Width and height include padding and border */
+*,*::before,*::after{
+  box-sizing: inherit
+}
+
+/* Full-size page with a dark background */
+html, body{
+  height: 100%;
+  margin: 0;
+  background: var(--void)
+}
+
+/* Default text style. Block text select, tap highlight and touch gestures */
+body{
+  font-family: var(--mono);
+  color: var(--bone);
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+/* Main game box. It holds the canvas, effects, HUD and screens */
+#wrap{
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden
+}
+
+/* The game canvas fills the whole box */
+canvas{
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  background: linear-gradient(to bottom,#070A10 0%,#05070A 60%,#0B1016 100%)
+}

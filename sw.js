@@ -1,0 +1,78 @@
+'use strict';
+
+var VERSION = 'cireep-v1';
+var CORE = [
+  './', 'index.html', 'style.css', 'fonts.css', 'script.js', 'manifest.webmanifest',
+  'fonts/IBMPlexMono-400.woff', 'fonts/IBMPlexMono-700.woff',
+  'img/icon-192.png', 'img/icon-512.png', 'img/icon-maskable-512.png', 'img/apple-touch-icon.png'
+];
+var FONT_CSS = 'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap';
+var FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+
+function cacheFonts(cache){
+  return fetch(FONT_CSS).then(function(res){
+    if(!res.ok) throw new Error('font css');
+    var copy = res.clone();
+    return Promise.all([cache.put(FONT_CSS, copy), res.text()]);
+  }).then(function(r){
+    var urls = r[1].match(/https:\/\/[^)'"\s]+/g) || [];
+    return Promise.all(urls.map(function(u){
+      return fetch(u).then(function(res){ if(res.ok) return cache.put(u, res); }).catch(function(){});
+    }));
+  });
+}
+
+self.addEventListener('install', function(e){
+  e.waitUntil(
+    caches.open(VERSION).then(function(cache){
+      return cache.addAll(CORE).then(function(){ return cacheFonts(cache).catch(function(){}); });
+    }).then(function(){ return self.skipWaiting(); })
+  );
+});
+
+self.addEventListener('activate', function(e){
+  e.waitUntil(
+    caches.keys().then(function(keys){
+      return Promise.all(keys.filter(function(k){ return k !== VERSION; }).map(function(k){ return caches.delete(k); }));
+    }).then(function(){ return self.clients.claim(); })
+  );
+});
+
+function networkFirst(req){
+  return caches.open(VERSION).then(function(cache){
+    return Promise.race([
+      fetch(req),
+      new Promise(function(_, reject){ setTimeout(reject, 4000); })
+    ]).then(function(res){
+      if(res && res.ok && res.type === 'basic') cache.put(req, res.clone());
+      return res;
+    }).catch(function(){
+      return cache.match(req, { ignoreSearch: true }).then(function(hit){
+        if(hit) return hit;
+        if(req.mode === 'navigate') return cache.match('index.html');
+      });
+    }).then(function(res){
+      return res || Response.error();
+    });
+  });
+}
+
+function cacheFirst(req){
+  return caches.open(VERSION).then(function(cache){
+    return cache.match(req).then(function(hit){
+      if(hit) return hit;
+      return fetch(req).then(function(res){
+        if(res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());
+        return res;
+      });
+    });
+  });
+}
+
+self.addEventListener('fetch', function(e){
+  var req = e.request;
+  if(req.method !== 'GET') return;
+  var url = new URL(req.url);
+  if(url.origin === self.location.origin) e.respondWith(networkFirst(req));
+  else if(FONT_HOSTS.indexOf(url.hostname) >= 0) e.respondWith(cacheFirst(req));
+});
