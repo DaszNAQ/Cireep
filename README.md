@@ -18,4 +18,9 @@ Desktop: ← → keys
 Mobile: drag your finger
 Warning
 
+# This is open source
+I'm releasing all my code in here, so if you wanna remix this game, you can get it, But if possible, I would like my name to appear in the game's end credits.
+
 This game has flashing lights and sudden scary images with sound. Turn on Reduce flashing or No jump-scare in the menu if you are sensitive.
+
+# THANK YOU
