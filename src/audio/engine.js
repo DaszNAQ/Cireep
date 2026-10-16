@@ -1,6 +1,4 @@
-// audio/engine.js
-// Audio core: AudioContext, main volume, limiter,
-// and small helpers used by the other audio files.
+// Audio core: context, volume, limiter and helpers.
 import { settings } from '../state.js';
 
 const readyHooks = [];

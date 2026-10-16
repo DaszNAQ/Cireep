@@ -1,7 +1,4 @@
-// check.mjs
-// Checks the source code with TypeScript (no need to run the game). It finds:
-// unknown names, wrong import/export, use before declare, and unused variables.
-// Needs TypeScript: `npm i -D typescript` (only for checking, the game does not need it).
+// Checks source with TypeScript (needs: npm i -D typescript).
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +9,7 @@ let ts;
 try { ts = require('typescript'); }
 catch { try { ts = require(path.join(process.env.TS_PATH || '', 'typescript')); } catch { console.error('TypeScript not found. Run: npm i -D typescript'); process.exit(2); } }
 
-// Error codes we care about. Other type errors are ignored because this is plain JS.
+// Error codes we care about. Other type errors are ignored.
 const KEEP = new Set([2304, 2552, 2305, 2614, 2459, 2724, 2307, 2448, 2451, 2300, 2539, 2540, 2632, 2349, 6133, 6196, 6198]);
 const cfgPath = path.join(root, 'tsconfig.json');
 const cfg = ts.readConfigFile(cfgPath, ts.sys.readFile);

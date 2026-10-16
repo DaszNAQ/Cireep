@@ -1,7 +1,4 @@
-// i18n.js
-// All game texts (English) and a function to put them into the page.
-// t(key) returns a text. {n} in the text is replaced by a number.
-// In index.html, data-i18n="key" sets plain text and data-i18n-html="key" sets text with HTML.
+// Game texts and a helper to put them into the page.
 
 const TEXT = {
   docTitle:'CIREEP — Catch the data',
@@ -9,7 +6,7 @@ const TEXT = {
   menuSub:'Data packets fall through the stream. Something falls with them, and it <em>poses</em> as a normal packet.',
   r1:'Catch data packets to score.',
   r2:'Cireep poses as a normal ball and only shows its face up close. Catching it costs one of your three firewall layers. A face that only flickers is fake; one that stays is real.',
-  r3:'The stream keeps corrupting: over time, with packets caught, and every time you lose a layer. Controls can invert.',
+  r3:'The stream keeps corrupting as you catch packets and every time you lose a layer. Controls can invert. After 100 points, packets start to drift unpredictably.',
   r4:'Drag your finger or use the ← → keys.',
   r5:'The ice ball slows every ball, including new ones, for 4 seconds.',
   r6:'The fire ball burns everything that is falling, +1 point per ball. Cireep burns too, for no points.',

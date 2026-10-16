@@ -1,6 +1,4 @@
-// audio/music.js
-// Background music made by code: drone, choir, music box, heartbeat
-// and random ambient sounds.
+// Background music and ambient sounds made by code.
 import { AC, MU, envG, impulse, master, noiseBuf, noiseSrc, onAudioReady, outS, pan, setMU } from './engine.js';
 import { screech } from './synth.js';
 import { DRONE_VOL, MUSIC_VOL, MU_CFG, SEMI, VOW } from '../config.js';

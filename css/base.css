@@ -1,10 +1,6 @@
-/*
-  base.css
-  Basic page setup: theme colors, fonts, reset, page body, game box and canvas.
-  Load this file first. Other CSS files use the variables defined here.
-*/
+/* Page setup: theme colors, fonts, reset, game box, canvas. */
 
-/* Theme colors, fonts and safe-area padding (for phones with a notch) */
+/* Theme colors, fonts and safe-area padding (phone notch) */
 :root{
   --void: #05070A;
   --bone: #D8DDD3;
@@ -30,7 +26,7 @@ html, body{
   background: var(--void)
 }
 
-/* Default text style. Block text select, tap highlight and touch gestures */
+/* Default text style. Block text select, tap highlight, gestures */
 body{
   font-family: var(--mono);
   color: var(--bone);

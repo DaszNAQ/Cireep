@@ -1,6 +1,4 @@
-// main.js
-// Entry point. Sets up all modules and runs the main game loop.
-// Also watches the frame rate and lowers the picture quality when the game is slow.
+// Entry point: sets up modules and runs the game loop.
 import { initAudio } from './audio/engine.js';
 import { initMusic, musicUpdate } from './audio/music.js';
 import { countTick } from './audio/sfx.js';

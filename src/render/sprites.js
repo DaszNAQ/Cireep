@@ -1,5 +1,4 @@
-// render/sprites.js
-// Sprite cache. Draws costly shapes once, then reuses the picture.
+// Sprite cache: draw costly shapes once, then reuse.
 import { DPR, SPR } from '../view.js';
 
 export function sprite(key, sw, sh, ox, oy, draw){

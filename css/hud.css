@@ -1,8 +1,4 @@
-/*
-  hud.css
-  The top bar while playing: score, REC timer, lives (eye icons) and chaos level.
-  The .stat style is also used on the game over screen.
-*/
+/* Top bar while playing: score, REC, lives, chaos level. */
 
 /* HUD bar at the top. Score on the left, lives on the right */
 #hud{
@@ -66,7 +62,7 @@
   filter: grayscale(1)
 }
 
-/* Chaos level text. It shows when the .on class is added */
+/* Chaos level text. Shown when .on is added */
 #chaosTag{
   font-size: 12px;
   font-weight: 600;

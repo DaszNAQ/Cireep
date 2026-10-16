@@ -1,5 +1,4 @@
-// audio/sfx.js
-// Game sound effects: hit, ice, fire, warnings, countdown and UI sounds.
+// Sound effects: hit, ice, fire, warnings and UI.
 import { AC, MU, audio, blip, envG, hum, master, noiseBuf, noiseSrc, outS, panTo } from './engine.js';
 import { choirNote, noteHz, whisper } from './music.js';
 import { braam, datamosh, sfxSwell } from './synth.js';

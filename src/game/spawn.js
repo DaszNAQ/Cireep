@@ -1,9 +1,9 @@
-// game/spawn.js
-// Creates balls and Cireep. Checks that each spawn is fair, so the player can always dodge.
+// Spawns balls and Cireep, and keeps spawns fair.
 import { hum } from '../audio/engine.js';
 import { stab } from '../audio/sfx.js';
 import { BASKET_V, FALSE_RATE, HUES } from '../config.js';
-import { cireepChance, revealTime, speedMul } from './difficulty.js';
+import { DRIFT_VMAX } from '../config.js';
+import { cireepChance, driftLevel, revealTime, speedMul } from './difficulty.js';
 import { t } from '../i18n.js';
 import { S, basket } from '../state.js';
 import { H, W } from '../view.js';
@@ -33,9 +33,9 @@ function laneSafe(c){
     ti = ttl(o);
     if(ti > -0.15 && Math.abs(ti - tc) <= 0.6){ wave.push(o); if(ti < tmin) tmin = ti; }
   }
-  const lo = basket.w/2, hi = W - basket.w/2, iv = [];
+  const lo = basket.w/2, hi = W - basket.w/2, iv = [], reach = W * DRIFT_VMAX * driftLevel() * 0.3;
   for(i=0;i<wave.length;i++){
-    const pad = basket.w/2 + wave[i].r*0.35 + 6;
+    const pad = basket.w/2 + wave[i].r*0.35 + 6 + reach;
     iv.push([wave[i].x - pad, wave[i].x + pad]);
   }
   iv.sort(function(a,b){ return a[0] - b[0]; });
@@ -70,9 +70,11 @@ export function spawnOne(){
     sp: (Math.random()-0.5)*2,
     ph: Math.random()*Math.PI*2,
     sway: (Math.random()-0.5) * 18 * (1 + S.chaos*0.25),
-    dead: 0
+    dead: 0,
+    dl: 1, dv: Math.random()*2 - 1, tg: Math.random()*2 - 1, turn: 0.3 + Math.random()*0.8
   };
   if(isV) o.tut = S.cNum < 2;
+  if(o.tut) o.dl = 0; // first two Cireep fall straight (tutorial)
   else if(kind === 'n' && S.breather <= 0 && Math.random() < FALSE_RATE[S.phase]) o.faD = revealTime() + 0.15 + Math.random()*0.45;
   let ok = false;
   for(let n=0;n<8 && !ok;n++){
@@ -87,7 +89,7 @@ export function spawnOne(){
 export function bumpChaos(){
   S.chaos++;
   S.nextChaos = S.caught + 20;
-  S.flick = 0.6; S.flickCol = '#FF1F3D'; S.shake = 14;
+  S.shake = 14;
   hum();
   const tag = $('chaosTag');
   tag.textContent = t('chaos', S.chaos);

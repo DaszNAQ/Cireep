@@ -1,8 +1,4 @@
-/*
-  responsive.css
-  Special cases: users who prefer less motion, and short screens.
-  Keep this file last so it can override the other files.
-*/
+/* Reduced motion and short screens. Keep this file last. */
 
 /* User prefers less motion: stop animations */
 @media (prefers-reduced-motion:reduce){

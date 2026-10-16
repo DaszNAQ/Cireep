@@ -1,11 +1,6 @@
-/*
-  effects.css
-  Full-screen visual layers on top of the canvas:
-  scanlines, frost, fire, flicker and dark edges (vignette).
-  Opacity and color of these layers are changed from JS (render/scene.js).
-*/
+/* Full-screen layers over the canvas: scanlines, fx, vignette. */
 
-/* Scanlines. They get stronger when the noise level --n grows */
+/* Scanlines. Stronger as the noise level --n grows */
 #wrap::after{
   content: "";
   position: absolute;
@@ -34,7 +29,7 @@
   background: rgb(255,110,20)
 }
 
-/* Light flicker: black or red flash (color is set from JS) */
+/* Flash layer: color is set from JS */
 #fxFlick{
   background: #000
 }

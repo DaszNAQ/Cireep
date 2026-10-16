@@ -1,5 +1,4 @@
-// render/objects.js
-// Draws falling objects: balls, ice ball, fire ball and the Cireep face.
+// Draws balls, ice ball, fire ball and the Cireep face.
 import { sprite } from './sprites.js';
 import { S } from '../state.js';
 import { ctx } from '../view.js';
@@ -27,7 +26,7 @@ function drawBall(o){
   ctx.stroke();
 }
 
-// Cireep face. Used for falling balls and jump-scares.
+// Cireep face, used on falling balls and jump-scares.
 export function drawFace(x, y, r, t, rage){
   const sd = Math.floor(t*9);
   function R(i){ const s = Math.sin((sd+1)*12.9898 + i*78.233)*43758.5453; return s - Math.floor(s); }

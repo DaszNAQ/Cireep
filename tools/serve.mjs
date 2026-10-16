@@ -1,8 +1,5 @@
 #!/usr/bin/env node
-// serve.mjs
-// Small file server for development. ES modules and the service worker need http, not file://.
-//
-//   node tools/serve.mjs [folder] [port]     default: project folder, port 8000
+// Dev file server. Usage: node tools/serve.mjs [folder] [port]
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';

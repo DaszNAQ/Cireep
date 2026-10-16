@@ -1,5 +1,4 @@
-// game/effects.js
-// Effects on falling balls: sparks, freeze (ice) and burn (fire).
+// Effects on balls: sparks, ice and fire.
 import { fireSound, iceSound } from '../audio/sfx.js';
 import { S, basket } from '../state.js';
 

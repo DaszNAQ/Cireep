@@ -1,7 +1,4 @@
-// sw.template.js
-// Service worker template. The build tool fills in the version and the file list,
-// then saves the result as dist/sw.js.
-// It lets the game work offline and be installed like an app.
+// Service worker template. The build fills in version and files.
 
 'use strict';
 
@@ -40,11 +37,11 @@ self.addEventListener('activate', function(e){
   );
 });
 
-// Game files: try the network first (always get the new version). If offline, use the saved copy.
+// Game files: network first, saved copy when offline.
 function networkFirst(req){
   return caches.open(VERSION).then(function(cache){
     return Promise.race([
-      fetch(req, { cache: 'no-cache' }), // Always check with the server. Do not trust the HTTP cache.
+      fetch(req, { cache: 'no-cache' }), // always check the server, skip the HTTP cache
       new Promise(function(_, reject){ setTimeout(reject, 4000); })
     ]).then(function(res){
       if(res && res.ok && res.type === 'basic') cache.put(req, res.clone());
@@ -60,7 +57,7 @@ function networkFirst(req){
   });
 }
 
-// Google fonts: use the saved copy first.
+// Google fonts: saved copy first.
 function cacheFirst(req){
   return caches.open(VERSION).then(function(cache){
     return cache.match(req).then(function(hit){

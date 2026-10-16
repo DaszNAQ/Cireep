@@ -1,9 +1,8 @@
-// game/update.js
-// Updates the game every frame while playing: timers, random events,
-// spawning, movement and catching.
+// Per-frame update: timers, events, spawning, catching.
 import { chime, fakeSound, invStart, riser, warble } from '../audio/sfx.js';
 import { wrapEl } from '../dom.js';
-import { phaseOf, revealTime, spawnGap } from './difficulty.js';
+import { DRIFT_TURN, DRIFT_VMAX, FLASH_STEP, FLASH_TIME } from '../config.js';
+import { driftLevel, phaseOf, revealTime, spawnGap } from './difficulty.js';
 import { burnAll, freezeAll } from './effects.js';
 import { loseLife } from './flow.js';
 import { bumpChaos, revealTick, spawnOne } from './spawn.js';
@@ -20,12 +19,13 @@ export function update(dt){
   moveBasket(dt);
   decayEffects(dt);
   rollRandomEvents(dt);
+  milestoneFlash();
   spawnStep(dt);
-  if(stepObjects(dt)) return; // Player lost a life: skip the rest of this frame
+  if(stepObjects(dt)) return; // life lost: skip the rest of the frame
   stepParticles(dt);
 }
 
-// Smooth slow-down when frozen, difficulty phase change, and event countdowns.
+// Frost slow-down, phase change and event countdowns.
 function advancePhase(dt){
   S.slow += ((S.frost > 0 ? 0.3 : 1) - S.slow) * Math.min(1, dt*10);
   const ph = phaseOf(S.t);
@@ -45,23 +45,26 @@ function tickTimers(dt){
   if(S.invertPre > 0){ S.invertPre -= dt; if(S.invertPre <= 0){ S.invert = 2.6; invStart(); } }
 }
 
-// Shake, flicker, frost and fire fade out. Noise grows with time and chaos level.
+// Fade shake, flash, frost and fire. Noise follows chaos level.
 function decayEffects(dt){
   if(S.shake > 0) S.shake = Math.max(0, S.shake - dt*36);
   if(S.flick > 0) S.flick -= dt;
   if(S.frost > 0) S.frost -= dt;
   if(S.fireT > 0) S.fireT -= dt;
-  S.nz = Math.min(1, S.t/150 + S.chaos*0.1);
+  S.nz = Math.min(1, S.chaos*0.1); // noise follows chaos level, not time
   const nzq = Math.round(S.nz*20)/20;
   if(nzq !== S.nzq){ S.nzq = nzq; wrapEl.style.setProperty('--n', nzq); }
 }
 
-// Random scary events: light flicker, inverted controls and fake scare faces.
+// Soft red flash each time the score passes a FLASH_STEP mark.
+function milestoneFlash(){
+  if(S.score < S.nextFlash) return;
+  while(S.nextFlash <= S.score) S.nextFlash += FLASH_STEP;
+  S.flick = FLASH_TIME; S.flickCol = '#FF1F3D';
+}
+
+// Random events: inverted controls and fake faces.
 function rollRandomEvents(dt){
-  if(S.chaos >= 1 && S.flick <= 0 && S.flickCd <= 0 && Math.random() < dt * (0.5 + S.chaos*0.45 + S.nz*2)){
-    S.flick = 0.06 + Math.random()*0.16; S.flickCd = 0.4;
-    S.flickCol = Math.random() < 0.6 ? '#000000' : '#FF1F3D';
-  }
   if(S.phase >= 1 && S.invert <= 0 && S.invertPre <= 0 && S.invertCd <= 0 && Math.random() < dt*[0, 0.08, 0.1, 0.16][S.phase]){
     S.invertPre = 0.8; S.invertCd = S.phase >= 3 ? 6 : 8; warble(0.8);
   }
@@ -84,7 +87,7 @@ function spawnStep(dt){
   }
 }
 
-// Cireep shows its face when it gets close. A normal ball may flash a fake face.
+// Cireep shows its face up close. Normal balls may fake it.
 function updateReveal(o, dt){
   if(o.v){
     const rt = (basket.y - o.y) / o.vy, rvT = o.tut ? 1.6 : revealTime();
@@ -96,7 +99,7 @@ function updateReveal(o, dt){
   }
 }
 
-// Player catches a normal ball: add score, ice/fire effect, raise chaos level.
+// Catch a normal ball: score, ice/fire effect, chaos level.
 function catchBall(o){
   if(o.k === 'fire'){
     burnAll(o);
@@ -114,16 +117,29 @@ function catchBall(o){
   if(S.caught >= S.nextChaos) bumpChaos();
 }
 
-// Move falling objects and check hits. Returns true if the player just lost a life.
+// Random sideways drift: each ball keeps picking a new direction.
+function drift(o, lvl, dt){
+  o.turn -= dt;
+  if(o.turn <= 0){
+    o.tg = Math.random()*2 - 1;
+    o.turn = DRIFT_TURN[0] + Math.random()*(DRIFT_TURN[1] - DRIFT_TURN[0]);
+  }
+  o.dv += (o.tg - o.dv) * Math.min(1, dt*4);
+  o.x += o.dv * W * DRIFT_VMAX * lvl * dt;
+}
+
+// Move balls and check hits. Returns true if a life was lost.
 function stepObjects(dt){
-  const top = basket.y, half = basket.w/2;
+  const top = basket.y, half = basket.w/2, dl = driftLevel();
   for(let i = S.objs.length - 1; i >= 0; i--){
     const o = S.objs[i], sm = S.slow;
     if(o.burn > 0){ o.burn -= dt; if(o.burn <= 0) S.objs.splice(i,1); continue; }
     o.y += o.vy * dt * sm;
     o.ph += dt*2.4*sm;
     o.x += Math.sin(o.ph) * o.sway * (o.v ? 1 + (o.rev || 0)*1.4 : 1) * dt * sm;
-    o.x = Math.max(o.r, Math.min(W - o.r, o.x));
+    if(dl > 0 && o.dl) drift(o, dl*o.dl, dt*sm);
+    if(o.x <= o.r){ o.x = o.r; o.tg = Math.abs(o.tg); o.dv = Math.max(o.dv, 0); }
+    else if(o.x >= W - o.r){ o.x = W - o.r; o.tg = -Math.abs(o.tg); o.dv = Math.min(o.dv, 0); }
     if(o.dead){ S.objs.splice(i,1); continue; }
     updateReveal(o, dt);
 

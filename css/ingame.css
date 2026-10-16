@@ -1,10 +1,6 @@
-/*
-  ingame.css
-  Controls that show during play: the pause button and the countdown.
-  Keep this file after buttons.css. It changes the padding of the .ghost button.
-*/
+/* Pause button and countdown. Keep after buttons.css. */
 
-/* Round pause button at the top center. Hidden until the game starts */
+/* Round pause button at the top center. Hidden until play */
 .iconbtn{
   position: absolute;
   top: 12px;
@@ -23,7 +19,7 @@
   fill: currentColor
 }
 
-/* Show the pause button only in play mode (data-mode is set from JS) */
+/* Show pause button only in play mode (data-mode from JS) */
 #wrap[data-mode="play"] .iconbtn{
   display: grid
 }

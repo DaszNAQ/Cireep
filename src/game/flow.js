@@ -1,10 +1,9 @@
-// game/flow.js
-// Game flow: start, pause, resume, lose a life, jump-scare, game over and back to menu.
+// Game flow: start, pause, life loss, game over, menu.
 import { audio } from '../audio/engine.js';
 import { musicMode } from '../audio/music.js';
 import { scareSound } from '../audio/scare.js';
 import { countTick, impact, infect, omen, pauseSound, startSound } from '../audio/sfx.js';
-import { SCARES } from '../config.js';
+import { FLASH_STEP, SCARES } from '../config.js';
 import { $, countEl, pauseScr, warnScr, wrapEl } from '../dom.js';
 import { bumpChaos } from './spawn.js';
 import { paintEyes, updateHUD } from '../hud.js';
@@ -40,7 +39,7 @@ export function loseLife(o){
 export function afterScare(){
   if(S.jump.fatal){ gameOver(); return; }
   S.jump = null; setMode('play'); S.invuln = 1.1;
-  // Remove falling Cireep so the player can catch their breath
+  // Clear falling Cireep so the player can catch a breath
   S.objs = S.objs.filter(function(o){ return !o.v; });
 }
 
@@ -65,7 +64,7 @@ export function start(){
   audio();
   startSound();
   setMode('play'); S.t=0; S.sec=-1; S.score=0; S.caught=0; S.lives=3; S.chaos=0;
-  S.objs=[]; S.spawn=0; S.nextChaos=30; S.shake=0; S.flick=0;
+  S.objs=[]; S.spawn=0; S.nextChaos=30; S.nextFlash=FLASH_STEP; S.shake=0; S.flick=0;
   S.invuln=0; S.invert=0; S.invertPre=0; S.invertCd=0; S.slow=1; S.boostCd=0; S.flickCd=0; resetInput(); S.jump=null; S.combo=0; S.floats=[];
   S.parts=[]; S.frost=0; S.fireT=0; S.nz=0; S.nzq=-1; wrapEl.style.setProperty('--n', 0);
   S.phase=0; S.breather=0; S.banner=null; S.fake=null; S.fakeCd=10; S.revCd=0; S.cNum=0;

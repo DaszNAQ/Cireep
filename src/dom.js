@@ -1,5 +1,4 @@
-// dom.js
-// Shortcuts to the page elements that many files use.
+// Shortcuts to page elements.
 
 export const $ = (id) => document.getElementById(id);
 export const cv = $('game');

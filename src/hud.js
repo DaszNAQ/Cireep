@@ -1,5 +1,4 @@
-// hud.js
-// HUD: score text, REC timer and life icons (eyes).
+// HUD: score text, REC timer and life icons.
 import { $, recEl } from './dom.js';
 import { t } from './i18n.js';
 import { S } from './state.js';

@@ -1,7 +1,4 @@
-/*
-  buttons.css
-  All buttons: main button, small "ghost" button, settings grid and button rows.
-*/
+/* All buttons: main, ghost, settings grid and button rows. */
 
 /* Main button */
 button{
@@ -45,7 +42,7 @@ button:focus-visible{
   border-color:var(--ice)
 }
 
-/* Settings buttons in 2 columns (buttons are created in ui.js) */
+/* Settings buttons in 2 columns (created in ui.js) */
 .settings{
   display: grid;
   grid-template-columns: 1fr 1fr;

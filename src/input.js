@@ -1,5 +1,4 @@
-// input.js
-// Player input: mouse, touch and keyboard. Also moves the basket.
+// Mouse, touch and keyboard input. Moves the basket.
 import { BASKET_V } from './config.js';
 import { cv } from './dom.js';
 import { S, basket } from './state.js';

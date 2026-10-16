@@ -1,6 +1,4 @@
-// view.js
-// Canvas size and sharpness (DPR). Handles window resize.
-// Can lower the quality on slow devices.
+// Canvas size, sharpness and window resize.
 import { cv } from './dom.js';
 import { S, basket } from './state.js';
 

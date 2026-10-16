@@ -1,6 +1,4 @@
-// config.js
-// All balance numbers in one place (difficulty, reveal time, volume).
-// Change the numbers here to tune the game.
+// Balance numbers for the game. Change them here to tune it.
 
 export const MUSIC_VOL = 0.55;
 export const DRONE_VOL = 0.09;
@@ -24,4 +22,13 @@ export const C_GAP = [0.95, 0.70, 0.55, 0.46, 0.40];
 export const HUES = [160, 178, 192, 206, 228, 262];
 export const REV = [0.85, 0.70, 0.55, 0.42];
 export const FALSE_RATE = [0, 0, 0.12, 0.22];
+// Drift: balls veer sideways, growing from DRIFT_START to DRIFT_FULL.
+export const DRIFT_START = 100;
+export const DRIFT_FULL = 400;
+export const DRIFT_VMAX = 0.50;       // max sideways speed (screen widths per second)
+export const DRIFT_TURN = [0.45, 1.3]; // seconds between direction changes (min, max)
+// Soft flash every FLASH_STEP points. No random flicker.
+export const FLASH_STEP = 50;
+export const FLASH_ALPHA = 0.1;   // flash strength (0-1), halved in reduce-flashing mode
+export const FLASH_TIME = 0.12;   // seconds
 export const SCARES = ['face', 'lunge', 'glitch', 'eyes'];

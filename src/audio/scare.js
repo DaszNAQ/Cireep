@@ -1,5 +1,4 @@
-// audio/scare.js
-// Builds the sound for each jump-scare type (calm, lunge, glitch, eyes, face).
+// Sounds for each jump-scare type.
 import { audio, blip, noiseBuf, stutter } from './engine.js';
 import { whisper } from './music.js';
 import { braam, datamosh, eyeClick, ring, screech, sfxSwell, shriek } from './synth.js';

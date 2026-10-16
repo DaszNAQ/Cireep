@@ -1,6 +1,4 @@
-// ui.js
-// User interface: buttons, keyboard shortcuts and the settings buttons
-// (sound, flashing, jump-scare).
+// Buttons, keyboard shortcuts and settings buttons.
 import { AC, master } from './audio/engine.js';
 import { uiClick } from './audio/sfx.js';
 import { $ } from './dom.js';
@@ -48,7 +46,7 @@ const SETTING_BUTTONS = [
   { act: 'scare', i18n: 'noScare' }
 ];
 
-// The same settings buttons appear on the menu, pause screen and game over screen.
+// Same settings buttons on menu, pause and game over screens.
 function buildSettings(){
   document.querySelectorAll('.settings').forEach(function(box){
     SETTING_BUTTONS.forEach(function(def){

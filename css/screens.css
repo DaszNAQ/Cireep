@@ -1,8 +1,4 @@
-/*
-  screens.css
-  Full-screen panels (menu, warning, pause, game over):
-  layout, titles, glitch effect, text, rules list and final score.
-*/
+/* Full-screen panels: menu, warning, pause, game over. */
 
 /* A full-screen panel on top of the game */
 .screen{
@@ -27,7 +23,7 @@
   display:none
 }
 
-/* Center the content when it is short. It scrolls when it is tall */
+/* Center short content. Tall content scrolls */
 .screen > :first-child{
   margin-top:auto
 }
@@ -59,7 +55,7 @@
   line-height: 1;
 }
 
-/* Glitch effect: two colored copies of the title, shown for a short moment */
+/* Glitch effect: two colored title copies, shown briefly */
 .title::before,.title::after{
   content: attr(data-text);
   position: absolute;
@@ -82,7 +78,7 @@
   color:var(--bone)
 }
 
-/* Glitch animation: copies are hidden most of the time, then jump quickly */
+/* Glitch animation: copies hidden most of the time, then jump */
 @keyframes glitch{
   0%,91%,100%{opacity:0;transform:none;clip-path:inset(0)
 }

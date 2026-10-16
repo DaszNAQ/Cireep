@@ -1,8 +1,4 @@
-/*
-  menu.css
-  Menu layout: one column on phones, two columns on wide screens.
-  Left column: title, start button and settings. Right column: rules.
-*/
+/* Menu layout: one column on phones, two on wide screens. */
 
 /* Default layout: one column */
 .menu-grid, .col-main, .col-side{

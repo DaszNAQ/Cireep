@@ -1,6 +1,4 @@
-// timing.js
-// Frame timing shared by the game loop and effects.
-// per(p) keeps effects at the same speed on slow and fast devices.
+// Frame timing shared by the loop and effects.
 
 export const timing = { fdt: 1 / 60, lowFx: false, fxEma: 16 };
 

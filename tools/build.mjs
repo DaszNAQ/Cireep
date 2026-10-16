@@ -1,15 +1,5 @@
 #!/usr/bin/env node
-// build.mjs
-// Makes the release version of the game:
-//   - joins src/ (ES modules) into one normal script (game.js)
-//   - joins css/ into one style.css (fonts are embedded inside)
-//   - makes the service worker (sw.js) and the zip package
-// No outside library needed. Node 18+ only.
-//
-//   node tools/build.mjs                  -> dist/ and release/cireep-html5.zip (index.html at the zip root)
-//   node tools/build.mjs --out DIR        -> use another output folder
-//   node tools/build.mjs --no-zip         -> do not make the zip
-//   node tools/build.mjs --hook FILE.js   -> add extra code at the end of the bundle (for testing)
+// Builds dist/ and a zip. Options: --out, --no-zip, --hook.
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -24,11 +14,11 @@ const hookFile = opt('--hook');
 const wantZip = !argv.includes('--no-zip');
 
 const ENTRY = 'src/main.js';
-// Files and folders copied as they are. CSS is not here: it is joined in step 3.
+// Files and folders copied as they are (CSS is joined later).
 const STATIC_FILES = ['manifest.webmanifest'];
 const STATIC_DIRS = ['fonts', 'img'];
 
-// ---------- 1. Read the modules and find which module imports which ----------
+// ---------- 1. Read modules and find their imports ----------
 const IMPORT_RE = /^import\s*\{([\s\S]*?)\}\s*from\s*['"]([^'"]+)['"];?[ \t]*\r?\n/gm;
 const modules = new Map();
 
@@ -53,11 +43,11 @@ function load(rel){
 }
 load(ENTRY);
 
-// Order = depth-first by import order. This is the same order ES modules run in.
+// Order = depth-first by import order (same as ES modules).
 const order = []; const seen = new Set();
 (function visit(rel){ if(seen.has(rel)) return; seen.add(rel); modules.get(rel).deps.forEach(visit); order.push(rel); })(ENTRY);
 
-// ---------- 2. Join into one scope: check for duplicate names ----------
+// ---------- 2. Join into one scope, check duplicate names ----------
 const DECL_RE = /^(?:export\s+)?(?:async\s+)?(?:function\s+([\w$]+)|(?:const|let|var)\s+([\w$]+))/gm;
 const owner = new Map();
 const parts = order.map(rel => {
@@ -69,13 +59,13 @@ const parts = order.map(rel => {
     owner.set(name, rel);
   }
   const body = code.replace(/^export\s+(?=(?:async\s+)?(?:function|const|let|var|class)\b)/gm, '').replace(/\s+$/, '');
-  return `// ===== ${rel} =====\n${body}\n`;
+  return `${body}\n`;
 });
 let bundle = `(function(){\n'use strict';\n\n${parts.join('\n')}`;
-if(hookFile) bundle += `\n// ===== hook =====\n${fs.readFileSync(path.resolve(hookFile), 'utf8')}\n`;
+if(hookFile) bundle += `\n${fs.readFileSync(path.resolve(hookFile), 'utf8')}\n`;
 bundle += '})();\n';
 
-// ---------- 3. Write dist: index.html, game.js, style.css and static files ----------
+// ---------- 3. Write dist: html, js, css, static files ----------
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, 'game.js'), bundle);
@@ -88,27 +78,25 @@ html = html.replace(TAG, '<script>window.CIREEP_SW = "sw.js";</script>\n<script 
 STATIC_FILES.forEach(f => fs.copyFileSync(path.join(root, f), path.join(outDir, f)));
 STATIC_DIRS.forEach(d => fs.cpSync(path.join(root, d), path.join(outDir, d), { recursive: true }));
 
-// Join all CSS files linked in index.html (same order) into one style.css.
-// WOFF fonts are embedded as data URI. There is no extra request, so the fonts still work
-// when the game runs in a sandboxed iframe without same-origin (CORS blocks font files).
+// Join CSS files into style.css. Fonts are embedded as data URIs.
 const CSS_LINK_RE = /[ \t]*<link rel="stylesheet" href="(css\/[^"]+\.css)">[ \t]*\r?\n/g;
 const cssFiles = [...html.matchAll(CSS_LINK_RE)].map(m => m[1]);
 if(!cssFiles.length) fail('index.html', 'no <link rel="stylesheet" href="css/..."> tag found');
 const cssBundle = cssFiles.map(rel => {
   const css = fs.readFileSync(path.join(root, rel), 'utf8').replace(/url\("\.\.\/(fonts\/[^"]+\.woff)"\)/g, (_, fontRel) => {
     const data = fs.readFileSync(path.join(root, fontRel)).toString('base64');
-    fs.rmSync(path.join(outDir, fontRel), { force: true }); // The font is inside the CSS now, so remove the copy
+    fs.rmSync(path.join(outDir, fontRel), { force: true }); // font is now inside the CSS, remove the copy
     return `url(data:font/woff;base64,${data})`;
   });
-  return `/* ===== ${rel} ===== */\n${css.trim()}\n`;
+  return `${css.trim()}\n`;
 }).join('\n');
 fs.writeFileSync(path.join(outDir, 'style.css'), cssBundle);
-// Keep one <link> for style.css (at the place of the first CSS link) and remove the others
+// Keep one <link> for style.css and remove the others
 let firstCssLink = true;
 html = html.replace(CSS_LINK_RE, () => { if(!firstCssLink) return ''; firstCssLink = false; return '<link rel="stylesheet" href="style.css">\n'; });
 fs.writeFileSync(path.join(outDir, 'index.html'), html);
 
-// ---------- 4. Service worker: the file list and version are made automatically ----------
+// ---------- 4. Service worker: file list and version ----------
 function walk(dir, base = ''){
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(dir, e.name), base + e.name + '/') : [base + e.name]);
 }
@@ -124,11 +112,11 @@ const sw = fs.readFileSync(path.join(root, 'tools/sw.template.js'), 'utf8')
 fs.writeFileSync(path.join(outDir, 'sw.js'), sw);
 const all = [...files, 'sw.js'].sort();
 
-// ---------- 5. Zip (index.html at the root, as itch.io needs) ----------
+// ---------- 5. Zip with index.html at the root ----------
 const CRC = new Uint32Array(256).map((_, n) => { let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
 const crc32 = (buf) => { let c = 0xFFFFFFFF; for(const b of buf) c = CRC[(c ^ b) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
 function zip(entries){
-  const DOS_TIME = 0, DOS_DATE = ((2025 - 1980) << 9) | (1 << 5) | 1; // Fixed date, so every build gives the same zip
+  const DOS_TIME = 0, DOS_DATE = ((2025 - 1980) << 9) | (1 << 5) | 1; // fixed date, so every build gives the same zip
   const locals = [], centrals = []; let offset = 0;
   for(const { name, data } of entries){
     const nameBuf = Buffer.from(name, 'utf8'), comp = zlib.deflateRawSync(data, { level: 9 }), crc = crc32(data);

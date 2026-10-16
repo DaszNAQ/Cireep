@@ -1,5 +1,5 @@
-// render/scene.js
-// Draws the background, basket, noise, glitch and screen overlay effects.
+// Draws background, basket, noise and screen effects.
+import { FLASH_ALPHA } from '../config.js';
 import { $, cv, wrapEl } from '../dom.js';
 import { sprite } from './sprites.js';
 import { S, basket, settings } from '../state.js';
@@ -24,7 +24,7 @@ export function updateFx(){
   let off = S.mode === 'scare' && S.jump && S.jump.kind !== 'calm', fa = 0;
   setFx(fxFrost, 'frost', (!off && S.frost > 0) ? Math.min(1, S.frost/1.2) * (settings.reduceFlash ? 0.12 : 0.28) : 0);
   setFx(fxFire, 'fire', (!off && S.fireT > 0) ? S.fireT/0.5*(settings.reduceFlash ? 0.06 : 0.22) : 0);
-  if(!off && S.flick > 0) fa = settings.reduceFlash ? 0.18 : (S.flickCol === '#000000' ? 0.72 : 0.3);
+  if(!off && S.flick > 0) fa = FLASH_ALPHA * (settings.reduceFlash ? 0.5 : 1);
   if(fa > 0 && fxS.col !== S.flickCol){ fxS.col = S.flickCol; fxFlick.style.background = S.flickCol; }
   setFx(fxFlick, 'flick', fa);
 }
@@ -97,7 +97,7 @@ export function drawBackdrop(){
     bg.addColorStop(0,'rgba(143,227,242,0)'); bg.addColorStop(0.5,'rgba(143,227,242,.07)'); bg.addColorStop(1,'rgba(143,227,242,0)');
     ctx.fillStyle=bg; ctx.fillRect(0,by-60,W,120);
   }
-  // Faint red eyes in the background. More of them appear as chaos grows.
+  // Faint red eyes in the background, more as chaos grows.
   const n = Math.min(10, S.chaos*2);
   for(let i=0;i<n;i++){
     const sx = ((i*137.5)%100)/100*W, sy = ((i*79.3)%70)/100*H + H*0.08;

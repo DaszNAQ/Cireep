@@ -1,7 +1,5 @@
-// game/difficulty.js
-// Difficulty curves. Speed, Cireep chance, spawn gap and reveal time
-// change over time and with the chaos level.
-import { CT, C_CIR, C_GAP, C_SPD, REV } from '../config.js';
+// Difficulty curves: speed, spawn gap, Cireep chance, reveal.
+import { CT, C_CIR, C_GAP, C_SPD, DRIFT_FULL, DRIFT_START, REV } from '../config.js';
 import { S } from '../state.js';
 
 function curve(a){
@@ -19,3 +17,6 @@ export function cireepChance(){ return Math.min(0.42, curve(C_CIR) + S.chaos*0.0
 export function spawnGap(){ return Math.max(0.36, curve(C_GAP) - S.chaos*0.02); }
 
 export function revealTime(){ return Math.max(0.36, REV[S.phase] - S.chaos*0.01); }
+
+// 0 before DRIFT_START points, 1 at DRIFT_FULL points.
+export function driftLevel(){ return Math.max(0, Math.min(1, (S.score - DRIFT_START) / (DRIFT_FULL - DRIFT_START))); }

@@ -1,5 +1,4 @@
-// render/scare.js
-// Draws the jump-scare screens (face, lunge, glitch, eyes).
+// Draws the jump-scare screens.
 import { drawFace } from './objects.js';
 import { glitchSlices, noise } from './scene.js';
 import { S, settings } from '../state.js';

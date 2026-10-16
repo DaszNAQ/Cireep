@@ -1,5 +1,4 @@
-// render/render.js
-// Draws one full frame: world, effects, texts and the scare screen.
+// Draws one full frame.
 import { t } from '../i18n.js';
 import { drawFace, drawObj } from './objects.js';
 import { drawScare } from './scare.js';
@@ -12,7 +11,7 @@ const MONO = '"IBM Plex Mono", monospace';
 const DISP = '"Chakra Petch", sans-serif';
 const RED = '#FF1F3D';
 
-// Font size from the screen width, kept between min and max (px).
+// Font size from screen width, kept between min and max (px).
 const px = (min, k, max) => Math.round(Math.max(min, Math.min(W*k, max)));
 
 export function render(){
@@ -30,7 +29,7 @@ export function render(){
   if(S.mode === 'scare') drawCalmScare();
 }
 
-// Everything inside here moves with the screen shake effect.
+// Everything here moves with the screen shake.
 function drawWorld(){
   let sx = 0, sy = 0;
   if(S.shake > 0){ sx = (Math.random()-0.5)*S.shake; sy = (Math.random()-0.5)*S.shake; }
@@ -86,7 +85,7 @@ function drawParticles(){
   }
 }
 
-// Background whisper text, inverted controls warning and phase banner.
+// Whisper text, inverted-controls warning and phase banner.
 function drawStatusTexts(){
   if(S.chaos >= 2 && (S.t % 6) < 0.9){
     overlayText(t('w' + (((S.t/6)|0) % 3 + 1)), H*0.52, 0.16, RED, '600 ' + px(16, 0.06, 34) + 'px ' + MONO);
@@ -99,7 +98,7 @@ function drawStatusTexts(){
   }
 }
 
-// A faint Cireep face for a moment (fake scare).
+// Faint Cireep face for a moment (fake scare).
 function drawFakeFace(){
   if(!S.fake) return;
   const fk = S.fake;
@@ -109,7 +108,7 @@ function drawFakeFace(){
   ctx.restore();
 }
 
-// "No jump-scare" mode: darken the screen and show a small face instead of the scare.
+// No jump-scare mode: dim the screen and show a small face.
 function drawCalmScare(){
   const cp = S.jump.t / S.jump.dur;
   ctx.fillStyle = 'rgba(20,2,8,' + (0.62*(1 - cp*0.4)) + ')'; ctx.fillRect(0,0,W,H);

@@ -1,8 +1,4 @@
-/*
-  fonts.css
-  Local font files (IBM Plex Mono). The build tool embeds them into the CSS.
-  The title font (Chakra Petch) is loaded from Google Fonts in index.html.
-*/
+/* Local IBM Plex Mono fonts (embedded by the build tool). */
 
 @font-face{
   font-family: "IBM Plex Mono";

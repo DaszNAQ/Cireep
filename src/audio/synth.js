@@ -1,6 +1,4 @@
-// audio/synth.js
-// Basic sound makers: screech, shriek, braam (deep horror sound),
-// glitch sound, eye click and ring.
+// Basic sound makers: screech, braam, glitch, click.
 import { AC, MU, dist, envG, master, noiseSrc, outS, panTo } from './engine.js';
 
 export function screech(t0, dur, vol, f0, glide, atk, soft){

@@ -1,15 +1,8 @@
 <!DOCTYPE html>
-<!--
-  index.html
-  Main page of the game. It has the canvas, the HUD and all screens
-  (menu, warning, pause, game over).
-  - Text comes from src/i18n.js (see the data-i18n attributes).
-  - Game code starts at src/main.js.
-  - Styles are in the css/ folder.
--->
+<!-- Main page: canvas, HUD and all screens. -->
 <html lang="en">
 <head>
-<!-- Page settings: size on phones, theme color and app (PWA) info -->
+<!-- Page settings: phone size, theme color and app info -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#05070A">
@@ -27,8 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
-<!-- Styles. Keep this order: a later file can override an earlier file.
-     The build tool joins them into one style.css. -->
+<!-- Styles. Keep this order: later files override earlier ones. -->
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/effects.css">
@@ -133,7 +125,7 @@
   </div>
 </div>
 
-<!-- Game code. The build tool replaces this tag with game.js -->
+<!-- Game code. The build replaces this tag with game.js -->
 <script type="module" src="src/main.js"></script>
 </body>
 </html>
